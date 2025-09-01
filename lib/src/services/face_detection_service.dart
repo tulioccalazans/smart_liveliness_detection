@@ -50,6 +50,7 @@ class FaceDetectionService {
 
   /// Initialize the face detector with current configuration
   void _initializeDetector() {
+    debugPrint("!!! >> _initializeDetector called");
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableClassification: true,
@@ -67,6 +68,7 @@ class FaceDetectionService {
   void updateConfig(LivenessConfig config) {
     if (_config.minFaceSize != config.minFaceSize) {
       // Dispose and reinitialize with new settings
+      debugPrint("!!! >> updateConfig called");
       _faceDetector.close();
       _initializeDetector();
     }
@@ -194,11 +196,11 @@ class FaceDetectionService {
       debugPrint('Standard InputImage creation failed: $e');
     }
 
-    // Approach 2: Force YUV420 format (most common)
+    // Approach 2: Force nv21 (Android) / bgra8888 (iOS) format (most common)
     try {
       return _createInputImageForced(image, camera);
     } catch (e) {
-      debugPrint('Forced YUV420 InputImage creation failed: $e');
+      debugPrint('Forced nv21 (Android) / bgra8888 (iOS) InputImage creation failed: $e');
     }
 
     // Approach 3: Minimal metadata approach
@@ -213,6 +215,7 @@ class FaceDetectionService {
 
   /// Standard InputImage creation with format detection
   InputImage? _createInputImageStandard(CameraImage image, CameraDescription camera) {
+
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);
@@ -230,21 +233,31 @@ class FaceDetectionService {
     );
   }
 
-  /// Forced YUV420 InputImage creation
+  /// Forced nv21 format for Android and bgra8888 for iOS InputImage creation
   InputImage? _createInputImageForced(CameraImage image, CameraDescription camera) {
+
     final WriteBuffer allBytes = WriteBuffer();
+
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);
     }
+
     final bytes = allBytes.done().buffer.asUint8List();
+
+    final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
+
+    final inputImageFormat = InputImageFormatValue.fromRawValue(image.format.raw);
+
+    // WARNING: According to google_ml_kit_flutter, It only supports nv21 format for Android and bgra8888 for iOS
+    debugPrint("_createInputImageForced called. Format [${inputImageFormat!.name}], It will be forced to ${Platform.isAndroid ? InputImageFormat.nv21.name : InputImageFormat.bgra8888.name}");
 
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
+        size: imageSize,
         rotation: _getInputImageRotation(camera),
-        format: InputImageFormat.yuv420, // Force YUV420
-        bytesPerRow: image.planes[0].bytesPerRow,
+        format: Platform.isAndroid ? InputImageFormat.nv21 : InputImageFormat.bgra8888,
+        bytesPerRow: image.planes.first.bytesPerRow,
       ),
     );
   }
@@ -262,8 +275,8 @@ class FaceDetectionService {
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: InputImageRotation.rotation0deg, // Fixed rotation
-        format: InputImageFormat.yuv420, // Fixed format
-        bytesPerRow: image.planes.isNotEmpty ? image.planes[0].bytesPerRow : image.width,
+        format: Platform.isAndroid ? InputImageFormat.nv21 : InputImageFormat.bgra8888, // Fixed format
+        bytesPerRow: image.planes.isNotEmpty ? image.planes.first.bytesPerRow : image.width,
       ),
     );
   }
@@ -281,9 +294,14 @@ class FaceDetectionService {
       case ImageFormatGroup.jpeg:
       case ImageFormatGroup.unknown:
       default:
-        // For any unsupported or unknown format, default to YUV420
-        debugPrint('Using YUV420 fallback for format: ${format.group}');
-        return InputImageFormat.yuv420;
+        // For any unsupported or unknown format, default to nv21 for android and bgra8888 for iOS
+        if(Platform.isAndroid) {
+          debugPrint('Using nv21 (Android) fallback for format: ${format.group}');
+          return InputImageFormat.nv21;
+        } else {
+          debugPrint('Using bgra8888 (iOS) fallback for format: ${format.group}');
+          return InputImageFormat.bgra8888;
+        }
     }
   }
 
@@ -313,6 +331,7 @@ class FaceDetectionService {
   /// Reinitialize the face detector
   Future<void> _reinitializeDetector() async {
     try {
+      debugPrint("!!! >> _reinitializeDetector called");
       await _faceDetector.close();
       await Future.delayed(const Duration(milliseconds: 100));
       _initializeDetector();
@@ -469,6 +488,7 @@ class FaceDetectionService {
 
   /// Clean up resources
   void dispose() {
+    debugPrint("!!! >> dispose called");
     _faceDetector.close();
   }
 }
