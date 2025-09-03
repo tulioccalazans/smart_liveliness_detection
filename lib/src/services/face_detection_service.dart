@@ -79,7 +79,7 @@ class FaceDetectionService {
   }
 
   /// Check if face is centered in the oval guide
-  bool checkFaceCentering(Face face, Size screenSize) {
+  bool checkFaceCenteringOLD(Face face, Size screenSize) {
     final screenCenterX = screenSize.width / 2;
     final screenCenterY = screenSize.height / 2 - screenSize.height * 0.05;
 
@@ -127,6 +127,104 @@ class FaceDetectionService {
         isHorizontallyCentered && isVerticallyCentered && isRightSize;
     debugPrint(
         'Face centered check: H=$isHorizontallyCentered, V=$isVerticallyCentered, Size=$isRightSize, Final=$_isFaceCentered');
+
+    return _isFaceCentered;
+  }
+
+  /// Check if face is centered in the oval guide
+  bool checkFaceCentering(Face face, Size screenSize) {
+
+    // Adjust screenSize because the camera may have rotated the image
+    Size screenSizeAux = Size(screenSize.width > screenSize.height ? screenSize.height : screenSize.width, screenSize.width > screenSize.height ? screenSize.width : screenSize.height);
+
+    // Oval center (adjusted 5% upwards from screen center)
+    final ovalCenterX = screenSizeAux.width / 2;
+    final ovalCenterY = screenSizeAux.height / 2 - screenSizeAux.height * 0.05;
+
+    // Oval dimensions
+    final ovalHeight = screenSizeAux.height * 0.55;
+    final ovalWidth = ovalHeight * 0.75;
+
+    final faceBox = face.boundingBox;
+
+    // Apply coordinate correction for front camera
+    double faceCenterX = faceBox.left + faceBox.width / 2;
+    // WARNING: This is really needed?
+    // if (_currentCamera?.lensDirection == CameraLensDirection.front) {
+    //   faceCenterX = screenSizeAux.width - (faceBox.left + faceBox.width / 2);
+    // }
+    final faceCenterY = faceBox.top + faceBox.height / 2;
+
+    // Platform-specific tolerances
+    final bool isAndroid = Platform.isAndroid;
+    final double horizontalToleranceMultiplier = isAndroid ? 1.2 : 1.0;
+    final double verticalToleranceMultiplier = isAndroid ? 1.1 : 1.0;
+
+    // Tolerance based on oval size (percentage of oval dimensions)
+    final maxHorizontalOffset = ovalWidth * 0.20 * horizontalToleranceMultiplier;
+    final maxVerticalOffset = ovalHeight * 0.15 * verticalToleranceMultiplier;
+
+    // Platform-specific size ratios
+    final minFaceWidthRatio = isAndroid ? 0.25 : 0.3;
+    final maxFaceWidthRatio = 0.85;
+    final minFaceHeightRatio = isAndroid ? 0.25 : 0.3;
+    final maxFaceHeightRatio = 0.85;
+
+    // Calculate size ratios
+    final faceWidthRatio = faceBox.width / ovalWidth;
+    final faceHeightRatio = faceBox.height / ovalHeight;
+
+    // Check if face is within oval boundaries
+    final ovalLeft = ovalCenterX - ovalWidth / 2;
+    final ovalRight = ovalCenterX + ovalWidth / 2;
+    final ovalTop = ovalCenterY - ovalHeight / 2;
+    final ovalBottom = ovalCenterY + ovalHeight / 2;
+
+    final isInsideOvalHorizontally = faceCenterX >= ovalLeft && faceCenterX <= ovalRight;
+    final isInsideOvalVertically = faceCenterY >= ovalTop && faceCenterY <= ovalBottom;
+
+    // CORREÇÃO: Verificação de centralização relativa ao centro do oval
+    final horizontalDistanceFromCenter = (faceCenterX - ovalCenterX).abs();
+    final verticalDistanceFromCenter = (faceCenterY - ovalCenterY).abs();
+
+    final isHorizontallyCentered = horizontalDistanceFromCenter <= maxHorizontalOffset;
+    final isVerticallyCentered = verticalDistanceFromCenter <= maxVerticalOffset;
+
+    // Check size requirements
+    final isRightWidth = faceWidthRatio >= minFaceWidthRatio && faceWidthRatio <= maxFaceWidthRatio;
+    final isRightHeight = faceHeightRatio >= minFaceHeightRatio && faceHeightRatio <= maxFaceHeightRatio;
+    final isRightSize = isRightWidth && isRightHeight;
+
+    // Check face proportion
+    final double faceAspectRatio = faceBox.width / faceBox.height;
+    final double expectedAspectRatio = 0.75;
+    final double aspectTolerance = 0.3; // Increased tolerance for more flexibility
+    final hasGoodProportion = (faceAspectRatio - expectedAspectRatio).abs() <= aspectTolerance;
+
+    // Debug information
+    debugPrint('=== FACE CENTERING DEBUG ===');
+    debugPrint('Oval: Center(${ovalCenterX.toStringAsFixed(1)}, ${ovalCenterY.toStringAsFixed(1)}), '
+        'Size(${ovalWidth.toStringAsFixed(1)}x${ovalHeight.toStringAsFixed(1)})');
+    debugPrint('Face: Center(${faceCenterX.toStringAsFixed(1)}, ${faceCenterY.toStringAsFixed(1)}), '
+        'Size(${faceBox.width.toStringAsFixed(1)}x${faceBox.height.toStringAsFixed(1)})');
+    debugPrint('Distance from center: H=${horizontalDistanceFromCenter.toStringAsFixed(1)}, '
+        'V=${verticalDistanceFromCenter.toStringAsFixed(1)}');
+    debugPrint('Max allowed distance: H=${maxHorizontalOffset.toStringAsFixed(1)}, '
+        'V=${maxVerticalOffset.toStringAsFixed(1)}');
+    debugPrint('Inside oval: H=$isInsideOvalHorizontally, V=$isInsideOvalVertically');
+    debugPrint('Centered: H=$isHorizontallyCentered, V=$isVerticallyCentered');
+    debugPrint('Size ratios: W=$faceWidthRatio, H=$faceHeightRatio');
+    debugPrint('Right size: W=$isRightWidth, H=$isRightHeight');
+
+    // Final validation
+    _isFaceCentered = isInsideOvalHorizontally &&
+        isInsideOvalVertically &&
+        isHorizontallyCentered &&
+        isVerticallyCentered &&
+        isRightSize;
+
+    debugPrint('Final result: $_isFaceCentered');
+    debugPrint('===========================');
 
     return _isFaceCentered;
   }
