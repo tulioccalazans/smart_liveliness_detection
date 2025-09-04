@@ -233,16 +233,20 @@ class FaceDetectionService {
   }
 
   /// Process camera image to detect faces with improved error handling
-  Future<List<Face>> processImage(CameraImage image, CameraDescription camera) async {
+  Future<List<Face>?> processImage(CameraImage image, CameraDescription camera) async {
     _currentCamera = camera;
 
     // Skip processing if already processing or implement frame throttling
-    if (_isProcessingImage) return [];
+    if (_isProcessingImage) {
+      debugPrint('_isProcessingImage = TRUE. Some image is being processed.');
+      return null; // WARNING: OK, But return null if it will be skipped
+    }
 
     // Frame throttling - process every Nth frame
     _frameSkipCounter++;
     if (_frameSkipCounter % _config.frameSkipInterval != 0) {
-      return [];
+      debugPrint('_frameSkipCounter (N = ${_config.frameSkipInterval}): This frame will be skipped (process every Nth frame to prevent buffer overflow)');
+      return null; // WARNING: OK, But return null if it will be skipped
     }
 
     _isProcessingImage = true;
