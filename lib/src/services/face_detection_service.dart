@@ -492,7 +492,7 @@ class FaceDetectionService {
   }
 
   /// Detect right head turn
-  bool _detectLeftTurn(Face face) {
+  bool _detectRightTurn(Face face) {
     if (face.headEulerAngleY != null) {
       _storeHeadAngle(face.headEulerAngleY!);
       return face.headEulerAngleY! < -_config.headTurnThreshold;
