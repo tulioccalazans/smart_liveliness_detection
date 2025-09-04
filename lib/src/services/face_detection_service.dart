@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -479,7 +480,43 @@ class FaceDetectionService {
         return _detectSmile(face);
       case ChallengeType.nod:
         return _detectNod(face);
+      case ChallengeType.tiltDown:
+        return _detectHeadTiltDown(face);
+      case ChallengeType.tiltUp:
+        return _detectHeadTiltUp(face);
     }
+  }
+
+  bool _detectHeadTiltUp(Face face) {
+    return _detectHeadTilt(face, up: true);
+  }
+
+  bool _detectHeadTiltDown(Face face) {
+    return _detectHeadTilt(face, up: false);
+  }
+
+  int? lockedTrackingId; // store the verified face id
+  Rect? lockedFaceBounds;
+  bool faceLocked = false;
+  bool _detectHeadTilt(Face face, {bool up = true}) {
+    final double? rotX = face.headEulerAngleX;
+    if (rotX == null) return false;
+
+    if (!up) {
+      log(rotX.toString(), name: 'Head Movement');
+      if (rotX < -20) { // Adjust threshold if needed
+        return true;
+      }
+    } else {
+      if (rotX > 20 && !faceLocked) {
+        lockedTrackingId = face.trackingId;
+        lockedFaceBounds = face.boundingBox;
+        faceLocked = true; // lock the face
+        debugPrint("Face locked after head tilt down.");
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Detect left head turn
