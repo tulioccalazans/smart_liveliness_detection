@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
@@ -45,9 +46,12 @@ class CameraService {
 
     _controller = CameraController(
       frontCamera,
+      // WARNING: Set to ResolutionPreset.high. Do NOT set it to ResolutionPreset.max because for some phones does NOT work.
+      // TODO: What is the best option, high OR medium? It need to be tested!
       ResolutionPreset.medium, // Use medium instead of high to reduce load
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.yuv420, // Explicitly set format
+      // WARNING: According to google_ml_kit_flutter, It only supports nv21 format for Android and bgra8888 for iOS
+      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888, // Explicitly set format
     );
 
     try {
