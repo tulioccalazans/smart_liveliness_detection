@@ -171,7 +171,7 @@ class LivenessController extends ChangeNotifier {
       );
 
       // Process faces with error handling
-      List<Face> faces = [];
+      List<Face>? faces = [];
       try {
         faces = await _faceDetectionService.processImage(image, camera);
       } catch (e) {
@@ -179,36 +179,38 @@ class LivenessController extends ChangeNotifier {
         // Continue with empty face list
       }
 
-      if (faces.isNotEmpty) {
-        final face = faces.first;
-        _isFaceDetected = true;
+      if(faces != null) {
+        if (faces.isNotEmpty) {
+          final face = faces.first;
+          _isFaceDetected = true;
 
-        final screenSize = Size(
-          image.width.toDouble(),
-          image.height.toDouble(),
-        );
+          final screenSize = Size(
+            image.width.toDouble(),
+            image.height.toDouble(),
+          );
 
-        bool isCentered = false;
-        try {
-          isCentered =
-              _faceDetectionService.checkFaceCentering(face, screenSize);
-          _updateFaceCenteringGuidance(face, screenSize);
-        } catch (e) {
-          debugPrint('Error checking face centering: $e');
-          _faceCenteringMessage = 'Error checking face position';
+          bool isCentered = false;
+          try {
+            isCentered =
+                _faceDetectionService.checkFaceCentering(face, screenSize);
+            _updateFaceCenteringGuidance(face, screenSize);
+          } catch (e) {
+            debugPrint('Error checking face centering: $e');
+            _faceCenteringMessage = 'Error checking face position';
+          }
+
+          if (_session.state == LivenessState.centeringFace && isCentered) {
+            _processLivenessDetection(face);
+          } else if (_session.state != LivenessState.centeringFace) {
+            _processLivenessDetection(face);
+          }
+        } else {
+          _isFaceDetected = false;
+          _faceCenteringMessage = 'No face detected';
         }
 
-        if (_session.state == LivenessState.centeringFace && isCentered) {
-          _processLivenessDetection(face);
-        } else if (_session.state != LivenessState.centeringFace) {
-          _processLivenessDetection(face);
-        }
-      } else {
-        _isFaceDetected = false;
-        _faceCenteringMessage = 'No face detected';
+        notifyListeners();
       }
-
-      notifyListeners();
     } catch (e) {
       debugPrint('Error in _processCameraImage: $e');
       _statusMessage = 'Processing error occurred';
@@ -296,7 +298,7 @@ class LivenessController extends ChangeNotifier {
     } else if (isTooSmall) {
       _faceCenteringMessage = 'Move closer';
     } else if (isHorizontallyOff) {
-      if (faceCenterX < ovalCenterX) {
+      if (faceCenterX > ovalCenterX) {
         _faceCenteringMessage = 'Move right';
       } else {
         _faceCenteringMessage = 'Move left';
