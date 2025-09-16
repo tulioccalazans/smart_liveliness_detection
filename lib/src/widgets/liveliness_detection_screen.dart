@@ -11,8 +11,7 @@ import 'package:smart_liveliness_detection/src/widgets/instruction_overlay.dart'
 import 'package:smart_liveliness_detection/src/widgets/liveness_progress_bar.dart';
 import 'package:smart_liveliness_detection/src/widgets/oval_progress.dart';
 import 'package:smart_liveliness_detection/src/widgets/status_indicator.dart';
-
-import 'success_overlay.dart';
+import 'package:smart_liveliness_detection/src/widgets/success_overlay.dart';
 
 /// Callback type for when a challenge is completed
 typedef ChallengeCompletedCallback = void Function(ChallengeType challengeType);

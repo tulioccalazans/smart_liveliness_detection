@@ -1,9 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-
-import '../config/app_config.dart';
-import '../config/theme_config.dart';
+import 'package:smart_liveliness_detection/src/config/app_config.dart';
+import 'package:smart_liveliness_detection/src/config/theme_config.dart';
 
 /// Custom painter for drawing the oval face guide with color progress
 class OvalColorProgressPainter extends CustomPainter {

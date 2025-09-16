@@ -3,8 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-
-import '../config/app_config.dart';
+import 'package:smart_liveliness_detection/src/config/app_config.dart';
 
 /// Service for motion tracking and spoofing detection
 class MotionService {
