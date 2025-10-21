@@ -643,7 +643,13 @@ class FaceDetectionService {
     if (challengeType != ChallengeType.zoom) {
       // For ALL other challenges, we first ensure that the face is
       // correctly positioned within the oval. If it isn't, we fail immediately.
-      if (ovalRect == null || !isFaceWellPositioned(face, ovalRect: ovalRect)) {
+      if (ovalRect == null || zoomFactor == null) {
+        debugPrint("ERROR: Challenge validation was called without ovalRect or zoomFactor.");
+        return false;
+      }
+
+
+      if (!isFaceWellPositioned(face, ovalRect: ovalRect, zoomFactor: zoomFactor)) {
         // We use zoomFactor: 1.0 by default because, for these challenges,
         // we expect the face to be in the final position (large oval).
         return false;

@@ -112,9 +112,20 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
   late LivenessController _controller;
   XFile? _finalImage;
 
+  late double _zoomFactor;
+
+  void _resetZoomFactor() {
+    setState(() {
+      _zoomFactor = widget.config?.initialZoomFactor ?? 1.0;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+
+    _resetZoomFactor();
+
     _controller = LivenessController(
       cameras: widget.cameras,
       vsync: this,
@@ -129,6 +140,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
       captureFinalImage: widget.captureFinalImage,
       onFaceDetected: widget.onFaceDetected,
       onFaceNotDetected: widget.onFaceNotDetected,
+      onReset: _resetZoomFactor,
     );
     WidgetsBinding.instance.addObserver(this);
   }
@@ -172,6 +184,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
             : null,
         onFinalImageCaptured: _handleFinalImageCaptured,
         captureFinalImage: widget.captureFinalImage,
+        onReset: _resetZoomFactor
       );
       setState(() {
         _finalImage = null;
@@ -397,7 +410,7 @@ class LivenessDetectionView extends StatelessWidget {
                 // Status indicators
                 if (showStatusIndicators) ...[
                   Positioned(
-                    top: showAppBar ? 100 : 40,
+                    top: showAppBar ? 130 : 40,
                     right: 20,
                     child: StatusIndicator.faceDetection(
                       isActive: controller.isFaceDetected,
@@ -405,7 +418,7 @@ class LivenessDetectionView extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    top: showAppBar ? 100 : 40,
+                    top: showAppBar ? 130 : 40,
                     left: 20,
                     child: StatusIndicator.lighting(
                       isActive: controller.isLightingGood,

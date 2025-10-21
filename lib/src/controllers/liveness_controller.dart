@@ -47,6 +47,9 @@ class LivenessController extends ChangeNotifier {
   /// Whether currently processing an image
   bool _isProcessing = false;
 
+  /// Whether this controller is disposed
+  bool _isDisposed = false;
+
   /// Current status message
   String _statusMessage = 'Initializing...';
 
@@ -73,6 +76,8 @@ class LivenessController extends ChangeNotifier {
   /// Whether to capture image at end of verification
   final bool _captureFinalImage;
 
+  final VoidCallback? onReset;
+
   /// Constructor
   LivenessController({
     required List<CameraDescription> cameras,
@@ -89,6 +94,7 @@ class LivenessController extends ChangeNotifier {
     FaceNotDetectedCallback? onFaceNotDetected,
     Function(String sessionId, XFile imageFile, Map<String, dynamic> metadata)? onFinalImageCaptured,
     bool captureFinalImage = true,
+    this.onReset,
   })  : _cameras = cameras,
         _config = config ?? const LivenessConfig(),
         _theme = theme ?? const LivenessTheme(),
@@ -112,7 +118,7 @@ class LivenessController extends ChangeNotifier {
   Future<void> _initialize() async {
     try {
       _statusMessage = 'Initializing camera...';
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
 
       _currentZoomFactor = 0.0;
       _zoomChallengeController.reset();
@@ -134,16 +140,21 @@ class LivenessController extends ChangeNotifier {
       }
 
       _statusMessage = 'Ready - Position your face in the oval';
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     } catch (e) {
       debugPrint('Error initializing liveness controller: $e');
       _statusMessage = 'Error initializing camera. Please restart the app.';
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     }
   }
 
   /// Process images from the camera stream
   Future<void> _processCameraImage(CameraImage image) async {
+
+    if (_isDisposed) {
+      return;
+    }
+
     if (_isProcessing || !_cameraService.isInitialized) return;
 
     _isProcessing = true;
@@ -154,7 +165,7 @@ class LivenessController extends ChangeNotifier {
         _session = _session.reset(_config);
         _faceDetectionService.resetTracking();
         _motionService.resetTracking();
-        notifyListeners();
+        if (!_isDisposed) notifyListeners();
         return;
       }
 
@@ -249,12 +260,12 @@ class LivenessController extends ChangeNotifier {
           _faceCenteringMessage = 'No face detected';
         }
 
-        notifyListeners();
+        if (!_isDisposed) notifyListeners();
       }
     } catch (e) {
       debugPrint('Error in _processCameraImage: $e');
       _statusMessage = 'Processing error occurred';
-      notifyListeners();
+      if (!_isDisposed) notifyListeners();
     } finally {
       _isProcessing = false;
     }
@@ -375,7 +386,7 @@ class LivenessController extends ChangeNotifier {
         if (_faceDetectionService.isFaceCentered) {
           _session.state = LivenessState.performingChallenges;
           _updateStatusMessage();
-          notifyListeners();
+          if (!_isDisposed) notifyListeners();
 
           // Schedule the ACTUAL start of the challenge animation for the next event cycle.
           // This gives the UI time to render the initial state of the challenge.
@@ -437,7 +448,7 @@ class LivenessController extends ChangeNotifier {
 
           _updateStatusMessage();
 
-          notifyListeners();
+          if (!_isDisposed) notifyListeners();
 
           //region ## Check next challenge -> Zoom challenge
           // After passing a challenge, check if the NEXT one is zoom, to start it.
@@ -522,7 +533,15 @@ class LivenessController extends ChangeNotifier {
     _motionService.resetTracking();
     _statusMessage = 'Initializing...';
     _isVerificationSuccessful = false;
-    notifyListeners();
+
+    _zoomChallengeController.reset();
+    _currentZoomFactor = _config.initialZoomFactor;
+
+    if (onReset != null) {
+      onReset!();
+    }
+
+    if (!_isDisposed) notifyListeners();
   }
 
   /// Update configuration
@@ -531,13 +550,13 @@ class LivenessController extends ChangeNotifier {
     _cameraService.updateConfig(config);
     _faceDetectionService.updateConfig(config);
     _motionService.updateConfig(config);
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
   }
 
   /// Update theme
   void updateTheme(LivenessTheme theme) {
     _theme = theme;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
   }
 
   /// Whether camera is initialized
@@ -619,6 +638,7 @@ class LivenessController extends ChangeNotifier {
   /// Clean up resources
   @override
   void dispose() async {
+    _isDisposed = true;
     _isProcessing = false;
 
     try {

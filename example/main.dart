@@ -110,9 +110,10 @@ class HomeScreen extends StatelessWidget {
               'Specific challenge sequence with custom messages',
               () {
                 const customConfig = LivenessConfig(
+                  initialZoomFactor: 0.6,
                   challengeTypes: [
-                    ChallengeType.zoom,
                     ChallengeType.blink,
+                    ChallengeType.zoom,
                     ChallengeType.turnRight,
                     ChallengeType.turnLeft,
                     ChallengeType.tiltUp,
@@ -122,8 +123,8 @@ class HomeScreen extends StatelessWidget {
                     //ChallengeType.nod,
                   ],
                   challengeInstructions: {
-                    ChallengeType.zoom: 'Bring your face closer slowly',
                     ChallengeType.blink: 'Blink your eyes slowly',
+                    ChallengeType.zoom: 'Bring your face closer slowly',
                     ChallengeType.turnRight: 'Turn your head to the right side',
                     ChallengeType.turnLeft: 'Turn your head to the left side',
                     ChallengeType.tiltUp: 'Tilt up your head',

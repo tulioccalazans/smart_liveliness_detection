@@ -61,6 +61,10 @@ class LivenessConfig {
   /// Stroke width of the oval face guide
   final double strokeWidth;
 
+  /// The initial zoom factor of the oval, between 0.0 (smallest) and 1.0 (largest).
+  /// This determines the starting size of the oval guide.
+  final double initialZoomFactor;
+
   /// Ratio for the outer guide markers
   final double guideMarkerRatio;
 
@@ -120,8 +124,7 @@ class LivenessConfig {
     this.maxSessionDuration = LivenessConstants.defaultMaxSessionDuration,
     this.minFaceSize = LivenessConstants.defaultMinFaceSize,
     this.eyeBlinkThresholdOpen = LivenessConstants.defaultEyeBlinkThresholdOpen,
-    this.eyeBlinkThresholdClosed =
-        LivenessConstants.defaultEyeBlinkThresholdClosed,
+    this.eyeBlinkThresholdClosed = LivenessConstants.defaultEyeBlinkThresholdClosed,
     this.smileThresholdNeutral = LivenessConstants.defaultSmileThresholdNeutral,
     this.smileThresholdSmiling = LivenessConstants.defaultSmileThresholdSmiling,
     this.headTurnThreshold = LivenessConstants.defaultHeadTurnThreshold,
@@ -132,13 +135,12 @@ class LivenessConfig {
     this.cameraZoomLevel = LivenessConstants.defaultCameraZoomLevel,
     this.maxMotionReadings = LivenessConstants.defaultMaxMotionReadings,
     this.maxHeadAngleReadings = LivenessConstants.defaultMaxHeadAngleReadings,
-    this.significantHeadAngleRange =
-        LivenessConstants.defaultSignificantHeadAngleRange,
-    this.minDeviceMovementThreshold =
-        LivenessConstants.defaultMinDeviceMovementThreshold,
+    this.significantHeadAngleRange = LivenessConstants.defaultSignificantHeadAngleRange,
+    this.minDeviceMovementThreshold = LivenessConstants.defaultMinDeviceMovementThreshold,
     this.ovalHeightRatio = LivenessConstants.defaultOvalHeightRatio,
     this.ovalWidthRatio = LivenessConstants.defaultOvalWidthRatio,
     this.strokeWidth = LivenessConstants.defaultStrokeWidth,
+    this.initialZoomFactor = 1.0,
     this.guideMarkerRatio = LivenessConstants.defaultGuideMarkerRatio,
     this.guideMarkerInnerRatio = LivenessConstants.defaultGuideMarkerInnerRatio,
     this.challengeTypes,
@@ -180,6 +182,7 @@ class LivenessConfig {
     double? ovalHeightRatio,
     double? ovalWidthRatio,
     double? strokeWidth,
+    double? initialZoomFactor,
     double? guideMarkerRatio,
     double? guideMarkerInnerRatio,
     List<ChallengeType>? challengeTypes,
@@ -202,14 +205,10 @@ class LivenessConfig {
     return LivenessConfig(
       maxSessionDuration: maxSessionDuration ?? this.maxSessionDuration,
       minFaceSize: minFaceSize ?? this.minFaceSize,
-      eyeBlinkThresholdOpen:
-          eyeBlinkThresholdOpen ?? this.eyeBlinkThresholdOpen,
-      eyeBlinkThresholdClosed:
-          eyeBlinkThresholdClosed ?? this.eyeBlinkThresholdClosed,
-      smileThresholdNeutral:
-          smileThresholdNeutral ?? this.smileThresholdNeutral,
-      smileThresholdSmiling:
-          smileThresholdSmiling ?? this.smileThresholdSmiling,
+      eyeBlinkThresholdOpen: eyeBlinkThresholdOpen ?? this.eyeBlinkThresholdOpen,
+      eyeBlinkThresholdClosed: eyeBlinkThresholdClosed ?? this.eyeBlinkThresholdClosed,
+      smileThresholdNeutral: smileThresholdNeutral ?? this.smileThresholdNeutral,
+      smileThresholdSmiling: smileThresholdSmiling ?? this.smileThresholdSmiling,
       headTurnThreshold: headTurnThreshold ?? this.headTurnThreshold,
       minLightingThreshold: minLightingThreshold ?? this.minLightingThreshold,
       brightPixelThreshold: brightPixelThreshold ?? this.brightPixelThreshold,
@@ -218,22 +217,18 @@ class LivenessConfig {
       cameraZoomLevel: cameraZoomLevel ?? this.cameraZoomLevel,
       maxMotionReadings: maxMotionReadings ?? this.maxMotionReadings,
       maxHeadAngleReadings: maxHeadAngleReadings ?? this.maxHeadAngleReadings,
-      significantHeadAngleRange:
-          significantHeadAngleRange ?? this.significantHeadAngleRange,
-      minDeviceMovementThreshold:
-          minDeviceMovementThreshold ?? this.minDeviceMovementThreshold,
+      significantHeadAngleRange: significantHeadAngleRange ?? this.significantHeadAngleRange,
+      minDeviceMovementThreshold: minDeviceMovementThreshold ?? this.minDeviceMovementThreshold,
       ovalHeightRatio: ovalHeightRatio ?? this.ovalHeightRatio,
       ovalWidthRatio: ovalWidthRatio ?? this.ovalWidthRatio,
       strokeWidth: strokeWidth ?? this.strokeWidth,
+      initialZoomFactor: initialZoomFactor ?? this.initialZoomFactor,
       guideMarkerRatio: guideMarkerRatio ?? this.guideMarkerRatio,
-      guideMarkerInnerRatio:
-          guideMarkerInnerRatio ?? this.guideMarkerInnerRatio,
+      guideMarkerInnerRatio: guideMarkerInnerRatio ?? this.guideMarkerInnerRatio,
       challengeTypes: challengeTypes ?? this.challengeTypes,
-      numberOfRandomChallenges:
-          numberOfRandomChallenges ?? this.numberOfRandomChallenges,
+      numberOfRandomChallenges: numberOfRandomChallenges ?? this.numberOfRandomChallenges,
       alwaysIncludeBlink: alwaysIncludeBlink ?? this.alwaysIncludeBlink,
-      challengeInstructions:
-          challengeInstructions ?? this.challengeInstructions,
+      challengeInstructions: challengeInstructions ?? this.challengeInstructions,
       // New parameters
       maxConsecutiveErrors: maxConsecutiveErrors ?? this.maxConsecutiveErrors,
       frameSkipInterval: frameSkipInterval ?? this.frameSkipInterval,
