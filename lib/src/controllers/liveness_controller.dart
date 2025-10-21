@@ -118,7 +118,7 @@ class LivenessController extends ChangeNotifier {
   /// Initialize the controller and services
   Future<void> _initialize() async {
     try {
-      _statusMessage = 'Initializing camera...';
+      _statusMessage = _config.messages.initializingCamera;
       if (!_isDisposed) notifyListeners();
 
       _zoomChallengeController.reset();
@@ -139,11 +139,11 @@ class LivenessController extends ChangeNotifier {
         );
       }
 
-      _statusMessage = 'Ready - Position your face in the oval';
+      _statusMessage = _config.messages.initialInstruction;
       if (!_isDisposed) notifyListeners();
     } catch (e) {
       debugPrint('Error initializing liveness controller: $e');
-      _statusMessage = 'Error initializing camera. Please restart the app.';
+      _statusMessage = _config.messages.errorInitializingCamera;
       if (!_isDisposed) notifyListeners();
     }
   }
@@ -236,7 +236,7 @@ class LivenessController extends ChangeNotifier {
             _updateFaceCenteringGuidance(face, screenSize);
           } catch (e) {
             debugPrint('Error checking face centering: $e');
-            _faceCenteringMessage = 'Error checking face position';
+            _faceCenteringMessage = _config.messages.errorCheckingFacePosition;
           }
 
           //region ## 3. Pass the calculated ovalRect to the processing method
@@ -257,14 +257,14 @@ class LivenessController extends ChangeNotifier {
           }
 
           _isFaceDetected = false;
-          _faceCenteringMessage = 'No face detected';
+          _faceCenteringMessage = _config.messages.noFaceDetected;
         }
 
         if (!_isDisposed) notifyListeners();
       }
     } catch (e) {
       debugPrint('Error in _processCameraImage: $e');
-      _statusMessage = 'Processing error occurred';
+      _statusMessage = _config.messages.errorProcessing;
       if (!_isDisposed) notifyListeners();
     } finally {
       _isProcessing = false;
@@ -343,27 +343,27 @@ class LivenessController extends ChangeNotifier {
 
     // Direction logic using the corrected coordinates
     if (isTooBig) {
-      _faceCenteringMessage = 'Move farther away';
+      _faceCenteringMessage = _config.messages.moveFartherAway;
     } else if (isTooSmall) {
-      _faceCenteringMessage = 'Move closer';
+      _faceCenteringMessage = _config.messages.moveCloser;
     } else if (isHorizontallyOff) {
       if (faceCenterX > ovalCenterX) {
-        _faceCenteringMessage = 'Move right';
+        _faceCenteringMessage = _config.messages.moveRight;
       } else {
-        _faceCenteringMessage = 'Move left';
+        _faceCenteringMessage = _config.messages.moveLeft;
       }
     } else if (isVerticallyOff) {
       if (faceCenterY < ovalCenterY) {
-        _faceCenteringMessage = 'Move down';
+        _faceCenteringMessage = _config.messages.moveDown;
       } else {
-        _faceCenteringMessage = 'Move up';
+        _faceCenteringMessage = _config.messages.moveUp;
       }
     } else {
-      _faceCenteringMessage = 'Perfect! Hold still';
+      _faceCenteringMessage = _config.messages.perfectHoldStill;
     }
 
     if (!isTooBig && !isTooSmall && !isHorizontallyOff && !isVerticallyOff) {
-      _faceCenteringMessage = 'Perfect! Hold still';
+      _faceCenteringMessage = _config.messages.perfectHoldStill;
       // Force the face detection service to consider the face centered
       _faceDetectionService.forceFaceCentered(true);
     }
@@ -372,14 +372,14 @@ class LivenessController extends ChangeNotifier {
   /// Process liveness detection for the current state
   void _processLivenessDetection(Face face, Rect ovalRect) {
     if (!_cameraService.isLightingGood) {
-      _statusMessage = 'Please move to a better lit area';
+      _statusMessage = _config.messages.poorLighting;
       return;
     }
 
     switch (_session.state) {
       case LivenessState.initial:
         _session.state = LivenessState.centeringFace;
-        _statusMessage = 'Position your face within the oval';
+        _statusMessage = _config.messages.initialInstruction;
         break;
 
       case LivenessState.centeringFace:
@@ -484,9 +484,10 @@ class LivenessController extends ChangeNotifier {
 
     if (!motionValid) {
       debugPrint('Potential spoofing detected: Face moved but device didn\'t');
+      _statusMessage = _config.messages.spoofingDetected;
+    } else {
+      _statusMessage = _config.messages.verificationComplete;
     }
-
-    _statusMessage = 'Liveness verification complete!';
 
     // Capture final image if enabled and verification was successful
     if (_captureFinalImage &&
@@ -522,7 +523,7 @@ class LivenessController extends ChangeNotifier {
     if (_session.currentChallenge != null) {
       _statusMessage = _session.currentChallenge!.instruction;
     } else {
-      _statusMessage = 'Processing verification...';
+      _statusMessage = _config.messages.processingVerification;
     }
   }
 
@@ -531,7 +532,7 @@ class LivenessController extends ChangeNotifier {
     _session = _session.reset(_config);
     _faceDetectionService.resetTracking();
     _motionService.resetTracking();
-    _statusMessage = 'Initializing...';
+    _statusMessage = _config.messages.initializing;
     _isVerificationSuccessful = false;
 
     _currentZoomFactor = _config.initialZoomFactor;

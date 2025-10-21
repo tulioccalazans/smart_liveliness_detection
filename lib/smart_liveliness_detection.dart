@@ -7,6 +7,7 @@ import 'package:smart_liveliness_detection/src/utils/enums.dart';
 
 // Configuration
 export 'src/config/app_config.dart';
+export 'src/config/messages_config.dart';
 export 'src/config/theme_config.dart';
 // Controllers
 export 'src/controllers/liveness_controller.dart';

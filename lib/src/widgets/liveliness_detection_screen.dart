@@ -208,6 +208,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
 
         // Use the LivenessDetectionView as a widget, not a method
         return LivenessDetectionView(
+          initializingMessage: widget.config?.messages.initializingCamera,
           showAppBar: widget.showAppBar,
           customAppBar: widget.customAppBar,
           customSuccessOverlay: successOverlay,
@@ -313,6 +314,8 @@ class LivenessDetectionView extends StatelessWidget {
   /// Whether to use color progress for oval
   final bool useColorProgress;
 
+  final String? initializingMessage;
+
   /// Constructor
   const LivenessDetectionView({
     super.key,
@@ -324,6 +327,7 @@ class LivenessDetectionView extends StatelessWidget {
     this.onImageCaptured,
     this.captureButtonText,
     this.useColorProgress = true,
+    this.initializingMessage = 'Initializing camera...'
   });
 
   @override
@@ -344,7 +348,7 @@ class LivenessDetectionView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Initializing camera...',
+                initializingMessage!,
                 style: TextStyle(
                   fontSize: 16,
                   color: theme.statusTextStyle.color,

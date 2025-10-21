@@ -1,3 +1,4 @@
+import 'package:smart_liveliness_detection/src/config/messages_config.dart';
 import 'package:smart_liveliness_detection/src/utils/enums.dart';
 
 import '../utils/constants.dart';
@@ -119,6 +120,8 @@ class LivenessConfig {
 
   /// Interval for automatic memory cleanup
   final Duration memoryCleanupInterval;
+  /// A collection of customizable messages for the liveness UI.
+  final LivenessMessages messages;
 
   const LivenessConfig({
     this.maxSessionDuration = LivenessConstants.defaultMaxSessionDuration,
@@ -159,6 +162,7 @@ class LivenessConfig {
     this.maxFrameDropRate = 0.7, // Allow up to 70% frame drops before reducing load
     this.enableAutomaticMemoryCleanup = true,
     this.memoryCleanupInterval = const Duration(seconds: 30),
+    this.messages = const LivenessMessages(),
   });
 
   /// Create a copy of this configuration with some values replaced
@@ -201,6 +205,7 @@ class LivenessConfig {
     double? maxFrameDropRate,
     bool? enableAutomaticMemoryCleanup,
     Duration? memoryCleanupInterval,
+    LivenessMessages? messages,
   }) {
     return LivenessConfig(
       maxSessionDuration: maxSessionDuration ?? this.maxSessionDuration,
@@ -241,6 +246,7 @@ class LivenessConfig {
       maxFrameDropRate: maxFrameDropRate ?? this.maxFrameDropRate,
       enableAutomaticMemoryCleanup: enableAutomaticMemoryCleanup ?? this.enableAutomaticMemoryCleanup,
       memoryCleanupInterval: memoryCleanupInterval ?? this.memoryCleanupInterval,
+      messages: messages ?? this.messages,
     );
   }
 
