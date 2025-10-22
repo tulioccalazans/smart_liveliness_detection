@@ -13,10 +13,14 @@ class Challenge {
 
   /// Map of default challenge instructions
   static final Map<ChallengeType, String> _defaultInstructions = {
-    ChallengeType.blink: 'Please blink your eyes slowly',
+    ChallengeType.blink: 'Blink your eyes slowly',
     ChallengeType.turnLeft: 'Turn your head to the left',
     ChallengeType.turnRight: 'Turn your head to the right',
-    ChallengeType.smile: 'Please smile',
+    ChallengeType.smile: 'Show me your best smile',
+    ChallengeType.tiltUp: 'Tilt up your head',
+    ChallengeType.tiltDown: 'Tilt down your head',
+    ChallengeType.zoom: 'Bring your face closer slowly',
+    ChallengeType.normal: 'Center Your Face',
     ChallengeType.nod: 'Nod your head up and down',
   };
 

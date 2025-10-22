@@ -11,8 +11,7 @@ import 'package:smart_liveliness_detection/src/widgets/instruction_overlay.dart'
 import 'package:smart_liveliness_detection/src/widgets/liveness_progress_bar.dart';
 import 'package:smart_liveliness_detection/src/widgets/oval_progress.dart';
 import 'package:smart_liveliness_detection/src/widgets/status_indicator.dart';
-
-import 'success_overlay.dart';
+import 'package:smart_liveliness_detection/src/widgets/success_overlay.dart';
 
 /// Callback type for when a challenge is completed
 typedef ChallengeCompletedCallback = void Function(ChallengeType challengeType);
@@ -109,15 +108,27 @@ class LivenessDetectionScreen extends StatefulWidget {
 }
 
 class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late LivenessController _controller;
   XFile? _finalImage;
+
+  late double _zoomFactor;
+
+  void _resetZoomFactor() {
+    setState(() {
+      _zoomFactor = widget.config?.initialZoomFactor ?? 1.0;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+
+    _resetZoomFactor();
+
     _controller = LivenessController(
       cameras: widget.cameras,
+      vsync: this,
       config: widget.config,
       theme: widget.theme,
       onChallengeCompleted: widget.onChallengeCompleted,
@@ -129,6 +140,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
       captureFinalImage: widget.captureFinalImage,
       onFaceDetected: widget.onFaceDetected,
       onFaceNotDetected: widget.onFaceNotDetected,
+      onReset: _resetZoomFactor,
     );
     WidgetsBinding.instance.addObserver(this);
   }
@@ -160,6 +172,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
     } else if (state == AppLifecycleState.resumed) {
       _controller = LivenessController(
         cameras: widget.cameras,
+        vsync: this,
         config: widget.config,
         theme: widget.theme,
         onChallengeCompleted: widget.onChallengeCompleted,
@@ -171,6 +184,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
             : null,
         onFinalImageCaptured: _handleFinalImageCaptured,
         captureFinalImage: widget.captureFinalImage,
+        onReset: _resetZoomFactor
       );
       setState(() {
         _finalImage = null;
@@ -194,6 +208,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
 
         // Use the LivenessDetectionView as a widget, not a method
         return LivenessDetectionView(
+          initializingMessage: widget.config?.messages.initializingCamera,
           showAppBar: widget.showAppBar,
           customAppBar: widget.customAppBar,
           customSuccessOverlay: successOverlay,
@@ -299,6 +314,8 @@ class LivenessDetectionView extends StatelessWidget {
   /// Whether to use color progress for oval
   final bool useColorProgress;
 
+  final String? initializingMessage;
+
   /// Constructor
   const LivenessDetectionView({
     super.key,
@@ -310,6 +327,7 @@ class LivenessDetectionView extends StatelessWidget {
     this.onImageCaptured,
     this.captureButtonText,
     this.useColorProgress = true,
+    this.initializingMessage = 'Initializing camera...'
   });
 
   @override
@@ -330,7 +348,7 @@ class LivenessDetectionView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Initializing camera...',
+                initializingMessage!,
                 style: TextStyle(
                   fontSize: 16,
                   color: theme.statusTextStyle.color,
@@ -373,9 +391,18 @@ class LivenessDetectionView extends StatelessWidget {
                 // Camera preview
                 _buildCameraPreview(controller),
 
+                // AnimatedOvalOverlay(
+                //   isFaceDetected: controller.isFaceDetected,
+                //   config: controller.config,
+                //   theme: controller.theme,
+                //   progress: controller.progress,
+                //   zoomFactor: controller.zoomFactor,
+                // ),
+
                 // Oval overlay with color progress indicator
                 if (useColorProgress)
                   OvalColorProgressOverlay(
+                    zoomFactor: controller.zoomFactor,
                     isFaceDetected: controller.isFaceDetected,
                     config: controller.config,
                     theme: controller.theme,
@@ -387,7 +414,7 @@ class LivenessDetectionView extends StatelessWidget {
                 // Status indicators
                 if (showStatusIndicators) ...[
                   Positioned(
-                    top: showAppBar ? 100 : 40,
+                    top: showAppBar ? 130 : 40,
                     right: 20,
                     child: StatusIndicator.faceDetection(
                       isActive: controller.isFaceDetected,
@@ -395,7 +422,7 @@ class LivenessDetectionView extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    top: showAppBar ? 100 : 40,
+                    top: showAppBar ? 130 : 40,
                     left: 20,
                     child: StatusIndicator.lighting(
                       isActive: controller.isLightingGood,

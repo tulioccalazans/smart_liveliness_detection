@@ -3,8 +3,7 @@ import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
-
-import '../config/app_config.dart';
+import 'package:smart_liveliness_detection/src/config/app_config.dart';
 
 /// Service for camera-related operations in liveness detection
 class CameraService {

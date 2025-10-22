@@ -4,7 +4,7 @@ A highly customizable Flutter package for face liveness detection with multiple 
 
 ## Features
 
-- 💯 Multiple liveness challenge types (blinking, smiling, head turns, nodding)
+- 💯 Multiple liveness challenge types (blinking, smiling, head turns, nodding, zoom, center the face, tilt up, tilt down)
 - 🔄 Random challenge sequence generation for enhanced security
 - 🎯 Face centering guidance with visual feedback
 - 🔍 Anti-spoofing measures (screen glare detection, motion correlation)
@@ -20,7 +20,7 @@ Add this package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  smart_liveliness_detection: ^0.1.3
+  smart_liveliness_detection: ^0.1.7
 ```
 
 Then run:
@@ -124,6 +124,40 @@ LivenessConfig config = LivenessConfig(
   // Session settings
   maxSessionDuration: Duration(minutes: 2),
 );
+```
+
+#### Plugin messages customization (Portuguese example)
+
+```dart
+LivenessDetectionScreen(
+  config: LivenessConfig(
+    // ... other settings
+    messages: const LivenessMessages(
+      // Face Centering Messages
+      moveFartherAway: 'Afaste-se um pouco',
+      moveCloser: 'Aproxime-se',
+      moveLeft: 'Mova para a esquerda',
+      moveRight: 'Mova para a direita',
+      moveUp: 'Mova para cima',
+      moveDown: 'Mova para baixo',
+      perfectHoldStill: 'Perfeito! Fique parado',
+      noFaceDetected: 'Nenhum rosto detectado',
+
+      // Process Status Messages
+      initializing: 'Inicializando...',
+      initialInstruction: 'Posicione seu rosto no oval',
+      poorLighting: 'Por favor, vá para uma área mais iluminada',
+      processingVerification: 'Processando verificação...',
+      verificationComplete: 'Verificação concluída!',
+      errorInitializingCamera: 'Erro ao iniciar a câmera. Por favor, reinicie.',
+      spoofingDetected: 'Possível fraude detectada',
+    ),
+  ),
+  onLivenessCompleted: (sessionId, isSuccessful, data) {
+    // ...
+  },
+)
+
 ```
 
 ### Theming
@@ -341,8 +375,12 @@ class _CustomLivenessScreenState extends State<CustomLivenessScreen> {
 - `ChallengeType.blink` - Verify that the user can blink
 - `ChallengeType.turnLeft` - Verify that the user can turn their head left
 - `ChallengeType.turnRight` - Verify that the user can turn their head right
+- `ChallengeType.tiltUp` - Verify that the user can tilt their head up
+- `ChallengeType.tiltDown` - Verify that the user can tilt their head down
 - `ChallengeType.smile` - Verify that the user can smile
 - `ChallengeType.nod` - Verify that the user can nod their head
+- `ChallengeType.Zoom` - The user needs to move their face closer to the camera, filling the oval.
+- `ChallengeType.normal` - Checks whether the user's face is centered. Ideal for taking a photo of the user.
 
 ## Anti-Spoofing Measures
 

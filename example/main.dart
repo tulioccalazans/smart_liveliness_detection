@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:smart_liveliness_detection/smart_liveliness_detection.dart';
+import 'package:smart_liveliness_detection/src/config/messages_config.dart';
 import 'package:smart_liveliness_detection/src/utils/enums.dart';
 
 void main() async {
@@ -110,8 +111,10 @@ class HomeScreen extends StatelessWidget {
               'Specific challenge sequence with custom messages',
               () {
                 const customConfig = LivenessConfig(
+                  initialZoomFactor: 0.1,
                   challengeTypes: [
                     ChallengeType.blink,
+                    ChallengeType.zoom,
                     ChallengeType.turnRight,
                     ChallengeType.turnLeft,
                     ChallengeType.tiltUp,
@@ -122,19 +125,94 @@ class HomeScreen extends StatelessWidget {
                   ],
                   challengeInstructions: {
                     ChallengeType.blink: 'Blink your eyes slowly',
-                    ChallengeType.turnRight: 'Turn your head to the right side',
-                    ChallengeType.turnLeft: 'Turn your head to the left side',
+                    ChallengeType.zoom: 'Bring your face closer slowly',
+                    ChallengeType.turnRight: 'Turn your head to the right',
+                    ChallengeType.turnLeft: 'Turn your head to the left',
                     ChallengeType.tiltUp: 'Tilt up your head',
                     ChallengeType.tiltDown: 'Tilt down your head',
                     ChallengeType.smile: 'Show me your best smile',
                     ChallengeType.normal: 'Center Your Face',
-                    //ChallengeType.nod: 'Nod your head',
+                    //ChallengeType.nod: 'Nod your head up and down',
                   },
                 );
                 _navigateToLivenessScreen(
                     context, customConfig, const LivenessTheme(
                     successColor: Colors.green,
                     errorColor: Colors.redAccent,
+                    guidanceTextStyle: TextStyle(
+                      //color: Color(0xFF2E38B7),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                ));
+              },
+            ),
+            _buildExampleButton(
+              context,
+              'Custom Challenges and Status Messages',
+              'Specific challenge sequence with custom messages',
+                  () {
+                const customConfig = LivenessConfig(
+                  initialZoomFactor: 0.1,
+                  challengeTypes: [
+                    ChallengeType.blink,
+                    ChallengeType.zoom,
+                    ChallengeType.turnRight,
+                    ChallengeType.turnLeft,
+                    ChallengeType.tiltUp,
+                    ChallengeType.tiltDown,
+                    ChallengeType.smile,
+                    ChallengeType.normal,
+                    //ChallengeType.nod,
+                  ],
+                  challengeInstructions: {
+                    ChallengeType.blink: 'Pisque os olhos lentamente',
+                    ChallengeType.zoom: 'Aproxime o rosto lentamente',
+                    ChallengeType.turnRight: 'Vire a cabeça para o lado direito',
+                    ChallengeType.turnLeft: 'Vire a cabeça para o lado esquerdo',
+                    ChallengeType.tiltUp: 'Incline a cabeça para cima',
+                    ChallengeType.tiltDown: 'Incline a cabeça para baixo',
+                    ChallengeType.smile: 'Mostre seu melhor sorriso',
+                    ChallengeType.normal: 'Centralize seu rosto',
+                    //ChallengeType.nod: 'Acene com a cabeça',
+                  },
+                  messages: LivenessMessages(
+                    moveFartherAway: 'Afaste-se um pouco',
+                    moveCloser: 'Aproxime-se um pouco',
+                    moveLeft: 'Mova para a esquerda',
+                    moveRight: 'Mova para a direita',
+                    moveUp: 'Mova para cima',
+                    moveDown: 'Mova para baixo',
+                    perfectHoldStill: 'Perfeito! Fique parado',
+                    noFaceDetected: 'Nenhum rosto detectado',
+                    errorCheckingFacePosition: 'Ocorreu um erro no processamento',
+
+                    initializing: 'Inicializando...',
+                    initializingCamera: 'Inicializando a camera...',
+                    errorInitializingCamera: 'Erro ao inicializar a câmera. Reinicie o aplicativo.',
+                    initialInstruction: 'Posicione seu rosto no oval',
+                    poorLighting: 'Mova-se para uma área mais iluminada',
+                    processingVerification: 'Processando verificação...',
+                    verificationComplete: 'Verificação de vivacidade concluída!',
+                    spoofingDetected: "Possível falsificação detectada: rosto movido, mas dispositivo não",
+                    errorProcessing: 'Ocorreu um erro de processamento',
+                  ),
+                );
+                _navigateToLivenessScreen(
+                    context, customConfig, const LivenessTheme(
+                  successColor: Colors.green,
+                  errorColor: Colors.redAccent,
+                  guidanceTextStyle: TextStyle(
+                    //color: Color(0xFF2E38B7),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  //overlayColor: Colors.white,
+                  // overlayOpacity: 0.85,
+                  // primaryColor: Colors.white,
+                  // ovalGuideColor: Colors.white, //.withValues(alpha: 0.87),
+                  // appBarBackgroundColor: Colors.white,
+                  // appBarTextColor: Colors.black87
                 ));
               },
             ),
