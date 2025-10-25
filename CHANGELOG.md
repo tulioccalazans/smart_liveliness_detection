@@ -1,5 +1,11 @@
 # Changelog 
 
+## Version 0.2.0 - October 25, 2025
+* Added support for new liveness challenges: "Raise Eyebrows" and "Open Mouth"
+* Improved face detection accuracy with updated ML models
+* Enhanced UI customization options for better theming
+* Fixed minor bugs and improved overall performance
+
 ## 0.1.3 - April 25, 2025
 * Google ML Kit upgraded to version 0.11.0
 * Bug fixes and improvements
