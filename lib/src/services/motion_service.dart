@@ -43,28 +43,44 @@ class MotionService {
     }
   }
 
-  /// Check if head motion correlates with device motion (anti-spoofing)
+  /// Check if head motion correlates with device motion (anti-spoofing).
+  /// This is improved to be more robust against spoofing attempts.
+  /// It accounts for the device's movement in all directions and fails safely if there is insufficient data.
   bool verifyMotionCorrelation(List<double> headAngleReadings) {
-    if (headAngleReadings.isEmpty || _accelerometerReadings.isEmpty) {
-      debugPrint('Not enough motion data to verify correlation');
-      return true;
+    // Fail-safe: if not enough data is available, consider it a potential issue.
+    if (headAngleReadings.length < 5 || _accelerometerReadings.length < 5) {
+      debugPrint('Not enough motion data to verify correlation, failing check.');
+      return false;
     }
 
+    // Calculate the range of head movement.
     double maxHeadAngle = headAngleReadings.reduce(math.max);
     double minHeadAngle = headAngleReadings.reduce(math.min);
     double headAngleRange = maxHeadAngle - minHeadAngle;
 
-    double maxDeviceAngle =
-        _accelerometerReadings.map((e) => e.y).reduce(math.max);
-    double minDeviceAngle =
-        _accelerometerReadings.map((e) => e.y).reduce(math.min);
-    double deviceAngleRange = maxDeviceAngle - minDeviceAngle;
+    // Calculate the magnitude of accelerometer vector for each reading.
+    final motionMagnitudes = _accelerometerReadings
+        .map((e) => math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z))
+        .toList();
+
+    // Calculate the range of device motion based on vector magnitudes.
+    double maxDeviceMotion = motionMagnitudes.reduce(math.max);
+    double minDeviceMotion = motionMagnitudes.reduce(math.min);
+    double deviceMotionRange = maxDeviceMotion - minDeviceMotion;
 
     debugPrint(
-        'Head angle range: $headAngleRange, Device angle range: $deviceAngleRange');
+        'Head angle range: $headAngleRange, Device motion range: $deviceMotionRange');
 
-    return !(headAngleRange > _config.significantHeadAngleRange &&
-        deviceAngleRange < _config.minDeviceMovementThreshold);
+    // Spoofing is suspected if the head moved significantly, but the device did not.
+    bool isSpoofingAttempt = headAngleRange > _config.significantHeadAngleRange &&
+        deviceMotionRange < _config.minDeviceMovementThreshold;
+
+    if (isSpoofingAttempt) {
+      debugPrint('Potential spoofing detected: Significant head motion with minimal device motion.');
+    }
+
+    // The check is valid if no spoofing is detected.
+    return !isSpoofingAttempt;
   }
 
   /// Reset all motion tracking

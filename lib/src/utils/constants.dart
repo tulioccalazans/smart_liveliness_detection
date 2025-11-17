@@ -22,6 +22,7 @@ class LivenessConstants {
   static const double defaultCameraZoomLevel = 0.5;
 
   // Motion detection
+  static const bool defaultEnableMotionCorrelationCheck = true;
   static const int defaultMaxMotionReadings = 100;
   static const int defaultMaxHeadAngleReadings = 30;
   static const double defaultSignificantHeadAngleRange = 20.0;

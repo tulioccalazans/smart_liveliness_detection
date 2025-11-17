@@ -42,6 +42,9 @@ class LivenessConfig {
   /// Maximum percentage of bright pixels to detect screen glare
   final double maxBrightPercentage;
 
+  /// Whether to enable motion correlation check (anti-spoofing).
+  final bool enableMotionCorrelationCheck;
+
   /// Camera zoom level for better face visibility
   final double cameraZoomLevel;
 
@@ -140,6 +143,7 @@ class LivenessConfig {
     this.glareBrightnessFactor = LivenessConstants.defaultGlareBrightnessFactor,
     this.minBrightPercentage = LivenessConstants.defaultMinBrightPercentage,
     this.maxBrightPercentage = LivenessConstants.defaultMaxBrightPercentage,
+    this.enableMotionCorrelationCheck = LivenessConstants.defaultEnableMotionCorrelationCheck,
     this.cameraZoomLevel = LivenessConstants.defaultCameraZoomLevel,
     this.maxMotionReadings = LivenessConstants.defaultMaxMotionReadings,
     this.maxHeadAngleReadings = LivenessConstants.defaultMaxHeadAngleReadings,
@@ -184,6 +188,7 @@ class LivenessConfig {
     double? glareBrightnessFactor,
     double? minBrightPercentage,
     double? maxBrightPercentage,
+    bool? enableMotionCorrelationCheck,
     double? cameraZoomLevel,
     int? maxMotionReadings,
     int? maxHeadAngleReadings,
@@ -226,6 +231,7 @@ class LivenessConfig {
       glareBrightnessFactor: glareBrightnessFactor ?? this.glareBrightnessFactor,
       minBrightPercentage: minBrightPercentage ?? this.minBrightPercentage,
       maxBrightPercentage: maxBrightPercentage ?? this.maxBrightPercentage,
+      enableMotionCorrelationCheck: enableMotionCorrelationCheck ?? this.enableMotionCorrelationCheck,
       cameraZoomLevel: cameraZoomLevel ?? this.cameraZoomLevel,
       maxMotionReadings: maxMotionReadings ?? this.maxMotionReadings,
       maxHeadAngleReadings: maxHeadAngleReadings ?? this.maxHeadAngleReadings,

@@ -453,8 +453,11 @@ class LivenessController extends ChangeNotifier {
   void _completeSession() async {
     _session.state = LivenessState.completed;
 
-    bool motionValid = _motionService
-        .verifyMotionCorrelation(_faceDetectionService.headAngleReadings);
+    bool motionValid = true; // Assume valid if check is disabled
+    if (_config.enableMotionCorrelationCheck) {
+      motionValid = _motionService
+          .verifyMotionCorrelation(_faceDetectionService.headAngleReadings);
+    }
 
     _isVerificationSuccessful = motionValid;
 
