@@ -176,7 +176,7 @@ class CameraService {
     }
   }
 
-  /// Detect potential screen glare (anti-spoofing) with error handling
+  /// Detect potential screen glare (anti-spoofing) with a dynamic threshold.
   bool detectScreenGlare(CameraImage image) {
     try {
       if (image.planes.isEmpty || image.planes[0].bytes.isEmpty) {
@@ -184,22 +184,31 @@ class CameraService {
       }
 
       final yPlane = image.planes[0].bytes;
-
-      int brightPixels = 0;
       int totalPixels = yPlane.length;
 
-      // Sample only a portion for performance
-      const int sampleRate = 20; // Sample every 20th pixel
+      // Sample for average brightness
+      const int sampleRate = 20;
       int sampledPixels = 0;
+      int totalBrightness = 0;
 
       for (int i = 0; i < totalPixels; i += sampleRate) {
-        if (yPlane[i] > _config.brightPixelThreshold) {
-          brightPixels++;
-        }
+        totalBrightness += yPlane[i];
         sampledPixels++;
       }
 
       if (sampledPixels == 0) return false;
+
+      final double avgBrightness = totalBrightness / sampledPixels;
+      
+      // Dynamic threshold based on average brightness
+      final double glareThreshold = avgBrightness * _config.glareBrightnessFactor;
+
+      int brightPixels = 0;
+      for (int i = 0; i < totalPixels; i += sampleRate) {
+        if (yPlane[i] > glareThreshold) {
+          brightPixels++;
+        }
+      }
 
       double brightPercent = brightPixels / sampledPixels;
 

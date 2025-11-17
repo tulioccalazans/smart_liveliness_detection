@@ -174,16 +174,21 @@ class LivenessController extends ChangeNotifier {
         debugPrint('Error calculating lighting: $e');
       }
 
-      // Detect screen glare with error handling
-      bool hasScreenGlare = false;
-      try {
-        hasScreenGlare = _cameraService.detectScreenGlare(image);
-        if (hasScreenGlare) {
-          debugPrint(
-              'Detected potential screen glare, possible spoofing attempt');
+      // Detect screen glare if enabled
+      if (_config.enableScreenGlareDetection) {
+        bool hasScreenGlare = false;
+        try {
+          hasScreenGlare = _cameraService.detectScreenGlare(image);
+          if (hasScreenGlare) {
+            debugPrint(
+                'Detected potential screen glare, possible spoofing attempt');
+            _statusMessage = _config.messages.spoofingDetected;
+            if (!_isDisposed) notifyListeners();
+            return; // Stop processing to prevent spoofing
+          }
+        } catch (e) {
+          debugPrint('Error detecting screen glare: $e');
         }
-      } catch (e) {
-        debugPrint('Error detecting screen glare: $e');
       }
 
       // Get the front camera

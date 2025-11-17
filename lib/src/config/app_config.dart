@@ -29,8 +29,12 @@ class LivenessConfig {
   /// Minimum threshold for adequate lighting (0.0-1.0)
   final double minLightingThreshold;
 
-  /// Pixel value (0-255) for detecting overly bright regions
-  final int brightPixelThreshold;
+  /// Whether to enable screen glare detection (anti-spoofing).
+  final bool enableScreenGlareDetection;
+
+  /// Multiplier for average brightness to set the dynamic glare threshold.
+  /// Pixels brighter than (average * factor) are considered glare.
+  final double glareBrightnessFactor;
 
   /// Minimum percentage of bright pixels to detect screen glare
   final double minBrightPercentage;
@@ -90,19 +94,19 @@ class LivenessConfig {
 
   /// Maximum number of consecutive processing errors before reinitializing detector
   final int maxConsecutiveErrors;
-  
+
   /// Frame skip interval (process every Nth frame to prevent buffer overflow)
   final int frameSkipInterval;
-  
+
   /// Maximum number of camera restart attempts
   final int maxCameraRestartAttempts;
-  
+
   /// Delay between camera restart attempts
   final Duration cameraRestartDelay;
-  
+
   /// Whether to enable aggressive error recovery
   final bool enableAggressiveErrorRecovery;
-  
+
   /// Maximum image processing timeout
   final Duration imageProcessingTimeout;
 
@@ -132,7 +136,8 @@ class LivenessConfig {
     this.smileThresholdSmiling = LivenessConstants.defaultSmileThresholdSmiling,
     this.headTurnThreshold = LivenessConstants.defaultHeadTurnThreshold,
     this.minLightingThreshold = LivenessConstants.defaultMinLightingThreshold,
-    this.brightPixelThreshold = LivenessConstants.defaultBrightPixelThreshold,
+    this.enableScreenGlareDetection = LivenessConstants.defaultEnableScreenGlareDetection,
+    this.glareBrightnessFactor = LivenessConstants.defaultGlareBrightnessFactor,
     this.minBrightPercentage = LivenessConstants.defaultMinBrightPercentage,
     this.maxBrightPercentage = LivenessConstants.defaultMaxBrightPercentage,
     this.cameraZoomLevel = LivenessConstants.defaultCameraZoomLevel,
@@ -175,7 +180,8 @@ class LivenessConfig {
     double? smileThresholdSmiling,
     double? headTurnThreshold,
     double? minLightingThreshold,
-    int? brightPixelThreshold,
+    bool? enableScreenGlareDetection,
+    double? glareBrightnessFactor,
     double? minBrightPercentage,
     double? maxBrightPercentage,
     double? cameraZoomLevel,
@@ -216,7 +222,8 @@ class LivenessConfig {
       smileThresholdSmiling: smileThresholdSmiling ?? this.smileThresholdSmiling,
       headTurnThreshold: headTurnThreshold ?? this.headTurnThreshold,
       minLightingThreshold: minLightingThreshold ?? this.minLightingThreshold,
-      brightPixelThreshold: brightPixelThreshold ?? this.brightPixelThreshold,
+      enableScreenGlareDetection: enableScreenGlareDetection ?? this.enableScreenGlareDetection,
+      glareBrightnessFactor: glareBrightnessFactor ?? this.glareBrightnessFactor,
       minBrightPercentage: minBrightPercentage ?? this.minBrightPercentage,
       maxBrightPercentage: maxBrightPercentage ?? this.maxBrightPercentage,
       cameraZoomLevel: cameraZoomLevel ?? this.cameraZoomLevel,

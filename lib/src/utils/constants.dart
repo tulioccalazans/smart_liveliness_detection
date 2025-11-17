@@ -13,7 +13,8 @@ class LivenessConstants {
 
   // Lighting thresholds
   static const double defaultMinLightingThreshold = 0.25;
-  static const int defaultBrightPixelThreshold = 230;
+  static const bool defaultEnableScreenGlareDetection = true;
+  static const double defaultGlareBrightnessFactor = 3.0;
   static const double defaultMinBrightPercentage = 0.05;
   static const double defaultMaxBrightPercentage = 0.30;
 
