@@ -36,8 +36,8 @@ class FaceDetectionService {
   /// Last measured head angle X (for nodding)
   double? _lastHeadEulerAngleX;
 
-  /// History of head angle readings
-  final List<double> _headAngleReadings = [];
+  /// History of head angle readings (dx: angleX, dy: angleY)
+  final List<Offset> _headAngleReadings = [];
 
   /// Configuration for liveness detection
   final LivenessConfig _config;
@@ -268,6 +268,14 @@ class FaceDetectionService {
 
       // Process the image
       final faces = await _faceDetector.processImage(inputImage);
+
+      // Store head angles for motion correlation check
+      if (faces.isNotEmpty) {
+        final face = faces.first;
+        if (face.headEulerAngleX != null && face.headEulerAngleY != null) {
+          _storeHeadAngle(Offset(face.headEulerAngleX!, face.headEulerAngleY!));
+        }
+      }
 
       // Reset error count on successful processing
       _errorCount = 0;
@@ -810,7 +818,6 @@ class FaceDetectionService {
   /// Detect left head turn
   bool _detectLeftTurn(Face face) {
     if (face.headEulerAngleY != null) {
-      _storeHeadAngle(face.headEulerAngleY!);
       return face.headEulerAngleY! > _config.headTurnThreshold;
     }
     return false;
@@ -819,7 +826,6 @@ class FaceDetectionService {
   /// Detect right head turn
   bool _detectRightTurn(Face face) {
     if (face.headEulerAngleY != null) {
-      _storeHeadAngle(face.headEulerAngleY!);
       return face.headEulerAngleY! < -_config.headTurnThreshold;
     }
     return false;
@@ -883,15 +889,15 @@ class FaceDetectionService {
   }
 
   /// Store head angle reading
-  void _storeHeadAngle(double angle) {
-    _headAngleReadings.add(angle);
+  void _storeHeadAngle(Offset angles) {
+    _headAngleReadings.add(angles);
     if (_headAngleReadings.length > _config.maxHeadAngleReadings) {
       _headAngleReadings.removeAt(0);
     }
   }
 
   /// Get head angle readings
-  List<double> get headAngleReadings => _headAngleReadings;
+  List<Offset> get headAngleReadings => _headAngleReadings;
 
   /// Whether face is properly centered
   bool get isFaceCentered => _isFaceCentered;

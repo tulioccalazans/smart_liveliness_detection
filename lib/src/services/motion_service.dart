@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -46,17 +47,21 @@ class MotionService {
   /// Check if head motion correlates with device motion (anti-spoofing).
   /// This is improved to be more robust against spoofing attempts.
   /// It accounts for the device's movement in all directions and fails safely if there is insufficient data.
-  bool verifyMotionCorrelation(List<double> headAngleReadings) {
+  bool verifyMotionCorrelation(List<Offset> headAngleReadings) {
     // Fail-safe: if not enough data is available, consider it a potential issue.
     if (headAngleReadings.length < 5 || _accelerometerReadings.length < 5) {
       debugPrint('Not enough motion data to verify correlation, failing check.');
       return false;
     }
 
-    // Calculate the range of head movement.
-    double maxHeadAngle = headAngleReadings.reduce(math.max);
-    double minHeadAngle = headAngleReadings.reduce(math.min);
-    double headAngleRange = maxHeadAngle - minHeadAngle;
+    // Calculate the range of head movement for both X and Y axes.
+    double maxHeadAngleX = headAngleReadings.map((o) => o.dx).reduce(math.max);
+    double minHeadAngleX = headAngleReadings.map((o) => o.dx).reduce(math.min);
+    double headAngleRangeX = maxHeadAngleX - minHeadAngleX;
+
+    double maxHeadAngleY = headAngleReadings.map((o) => o.dy).reduce(math.max);
+    double minHeadAngleY = headAngleReadings.map((o) => o.dy).reduce(math.min);
+    double headAngleRangeY = maxHeadAngleY - minHeadAngleY;
 
     // Calculate the magnitude of accelerometer vector for each reading.
     final motionMagnitudes = _accelerometerReadings
@@ -69,10 +74,11 @@ class MotionService {
     double deviceMotionRange = maxDeviceMotion - minDeviceMotion;
 
     debugPrint(
-        'Head angle range: $headAngleRange, Device motion range: $deviceMotionRange');
+        'Head angle range X: $headAngleRangeX, Y: $headAngleRangeY, Device motion range: $deviceMotionRange');
 
-    // Spoofing is suspected if the head moved significantly, but the device did not.
-    bool isSpoofingAttempt = headAngleRange > _config.significantHeadAngleRange &&
+    // Spoofing is suspected if the head moved significantly in either axis, but the device did not.
+    bool isSpoofingAttempt = (headAngleRangeX > _config.significantHeadAngleRange ||
+        headAngleRangeY > _config.significantHeadAngleRange) &&
         deviceMotionRange < _config.minDeviceMovementThreshold;
 
     if (isSpoofingAttempt) {
