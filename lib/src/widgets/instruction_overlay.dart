@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../config/theme_config.dart';
+import 'package:smart_liveliness_detection/src/config/theme_config.dart';
 
 /// Widget for displaying liveness detection instructions
 class InstructionOverlay extends StatelessWidget {

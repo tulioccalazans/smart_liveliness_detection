@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-
-import '../config/theme_config.dart';
+import 'package:smart_liveliness_detection/src/config/theme_config.dart';
 
 /// Widget to draw face landmarks and contours
 class FaceLandmarksOverlay extends StatelessWidget {

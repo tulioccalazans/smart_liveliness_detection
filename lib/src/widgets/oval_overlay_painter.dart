@@ -1,14 +1,16 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-
-import '../config/app_config.dart';
-import '../config/theme_config.dart';
+import 'package:smart_liveliness_detection/src/config/app_config.dart';
+import 'package:smart_liveliness_detection/src/config/theme_config.dart';
 
 /// Custom painter for drawing the oval face guide with adjacent progress circle
 class OvalOverlayPainter extends CustomPainter {
   /// Whether a face is detected
   final bool isFaceDetected;
+
+  /// Zoom factor for the oval
+  final double zoomFactor; // Receives the factor from 0.0 to 1.0
 
   /// Liveness config
   final LivenessConfig config;
@@ -39,6 +41,7 @@ class OvalOverlayPainter extends CustomPainter {
 
   /// Constructor
   OvalOverlayPainter({
+    required this.zoomFactor,
     this.isFaceDetected = false,
     this.config = const LivenessConfig(),
     this.theme = const LivenessTheme(),
@@ -55,6 +58,9 @@ class OvalOverlayPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2 - size.height * 0.05);
 
+    const initialScale = 0.7; // Oval starts at 70% of final size
+    final currentScale = initialScale + (1.0 - initialScale) * zoomFactor;
+
     // Larger oval
     final ovalHeight = size.height * config.ovalHeightRatio;
     final ovalWidth = ovalHeight * config.ovalWidthRatio;
@@ -66,9 +72,9 @@ class OvalOverlayPainter extends CustomPainter {
             : config.strokeWidth;
 
     final ovalRect = Rect.fromCenter(
-      center: center,
-      width: ovalWidth,
-      height: ovalHeight,
+      center: size.center(Offset.zero),
+      width: ovalWidth * currentScale,
+      height: ovalHeight * currentScale,
     );
 
     // Draw the main overlay
@@ -211,6 +217,9 @@ class AnimatedOvalOverlay extends StatefulWidget {
   /// Width of the progress indicator
   final double progressWidth;
 
+  /// Zoom factor for the oval, controlled by an external animation (0.0 to 1.0)
+  final double zoomFactor;
+
   /// Constructor
   const AnimatedOvalOverlay({
     super.key,
@@ -218,6 +227,7 @@ class AnimatedOvalOverlay extends StatefulWidget {
     this.config = const LivenessConfig(),
     this.theme = const LivenessTheme(),
     this.progress = 0.0,
+    this.zoomFactor = 1.0,
     this.progressTrackColor,
     this.progressIndicatorColor,
     this.progressWidth = 6.0,
@@ -275,6 +285,7 @@ class _AnimatedOvalOverlayState extends State<AnimatedOvalOverlay>
             size: Size.infinite,
             painter: OvalOverlayPainter(
               isFaceDetected: widget.isFaceDetected,
+              zoomFactor: widget.zoomFactor,
               config: widget.config,
               theme: widget.theme,
               animationValue: _animation.value,
@@ -291,6 +302,7 @@ class _AnimatedOvalOverlayState extends State<AnimatedOvalOverlay>
         size: Size.infinite,
         painter: OvalOverlayPainter(
           isFaceDetected: widget.isFaceDetected,
+          zoomFactor: widget.zoomFactor,
           config: widget.config,
           theme: widget.theme,
           progress: widget.progress,

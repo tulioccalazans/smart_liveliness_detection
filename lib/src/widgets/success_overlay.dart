@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../config/theme_config.dart';
+import 'package:smart_liveliness_detection/src/config/theme_config.dart';
 
 /// Widget displayed when liveness verification is complete
 class SuccessOverlay extends StatefulWidget {

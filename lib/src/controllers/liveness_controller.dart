@@ -1,15 +1,14 @@
-import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:smart_liveliness_detection/smart_liveliness_detection.dart';
+import 'package:smart_liveliness_detection/src/services/camera_service.dart';
 import 'package:smart_liveliness_detection/src/services/capture_service.dart';
+import 'package:smart_liveliness_detection/src/services/face_detection_service.dart';
+import 'package:smart_liveliness_detection/src/services/motion_service.dart';
 import 'package:smart_liveliness_detection/src/utils/enums.dart';
+import 'package:smart_liveliness_detection/src/controllers/zoom_challenge_controller.dart';
 
-import '../services/camera_service.dart';
-import '../services/face_detection_service.dart';
-import '../services/motion_service.dart';
 
 /// Controller for liveness detection session
 class LivenessController extends ChangeNotifier {
@@ -46,6 +45,9 @@ class LivenessController extends ChangeNotifier {
   /// Whether currently processing an image
   bool _isProcessing = false;
 
+  /// Whether this controller is disposed
+  bool _isDisposed = false;
+
   /// Current status message
   String _statusMessage = 'Initializing...';
 
@@ -55,20 +57,29 @@ class LivenessController extends ChangeNotifier {
   /// Callback for when liveness verification is completed
   final LivenessCompletedCallback? _onLivenessCompleted;
 
+  /// Callback for when face is detected
+  final FaceDetectedCallback? _onFaceDetected;
+
+  /// Callback for when face is NOT detected (It will trigger the first face non-detection event after any face detection)
+  final FaceNotDetectedCallback? _onFaceNotDetected;
+
   /// Callback for when final image is captured
-  final Function(
-          String sessionId, XFile imageFile, Map<String, dynamic> metadata)?
-      _onFinalImageCaptured;
+  final Function(String sessionId, XFile imageFile, Map<String, dynamic> metadata)? _onFinalImageCaptured;
 
   /// Whether verification was successful (after completion)
   bool _isVerificationSuccessful = false;
 
+  late final ZoomChallengeController _zoomChallengeController;
+
   /// Whether to capture image at end of verification
   final bool _captureFinalImage;
+
+  final VoidCallback? onReset;
 
   /// Constructor
   LivenessController({
     required List<CameraDescription> cameras,
+    required TickerProvider vsync,
     LivenessConfig? config,
     LivenessTheme? theme,
     CameraService? cameraService,
@@ -77,32 +88,38 @@ class LivenessController extends ChangeNotifier {
     List<ChallengeType>? challengeTypes,
     ChallengeCompletedCallback? onChallengeCompleted,
     LivenessCompletedCallback? onLivenessCompleted,
-    Function(String sessionId, XFile imageFile, Map<String, dynamic> metadata)?
-        onFinalImageCaptured,
+    FaceDetectedCallback? onFaceDetected,
+    FaceNotDetectedCallback? onFaceNotDetected,
+    Function(String sessionId, XFile imageFile, Map<String, dynamic> metadata)? onFinalImageCaptured,
     bool captureFinalImage = true,
+    this.onReset,
   })  : _cameras = cameras,
         _config = config ?? const LivenessConfig(),
+        _currentZoomFactor = config?.initialZoomFactor ?? 1.0,
         _theme = theme ?? const LivenessTheme(),
         _cameraService = cameraService ?? CameraService(config: config),
-        _faceDetectionService =
-            faceDetectionService ?? FaceDetectionService(config: config),
+        _faceDetectionService =faceDetectionService ?? FaceDetectionService(config: config),
         _motionService = motionService ?? MotionService(config: config),
         _onChallengeCompleted = onChallengeCompleted,
         _onLivenessCompleted = onLivenessCompleted,
+        _onFaceDetected = onFaceDetected,
+        _onFaceNotDetected = onFaceNotDetected,
         _onFinalImageCaptured = onFinalImageCaptured,
         _captureFinalImage = captureFinalImage,
         _session = LivenessSession(
-          challenges: LivenessSession.generateRandomChallenges(
-              config ?? const LivenessConfig()),
+          challenges: LivenessSession.generateRandomChallenges(config ?? const LivenessConfig()),
         ) {
+    _zoomChallengeController = ZoomChallengeController(vsync: vsync, initialValue: _config.initialZoomFactor);
     _initialize();
   }
 
   /// Initialize the controller and services
   Future<void> _initialize() async {
     try {
-      _statusMessage = 'Initializing camera...';
-      notifyListeners();
+      _statusMessage = _config.messages.initializingCamera;
+      if (!_isDisposed) notifyListeners();
+
+      _zoomChallengeController.reset();
 
       // Initialize camera service
       await _cameraService.initialize(_cameras);
@@ -120,17 +137,22 @@ class LivenessController extends ChangeNotifier {
         );
       }
 
-      _statusMessage = 'Ready - Position your face in the oval';
-      notifyListeners();
+      _statusMessage = _config.messages.initialInstruction;
+      if (!_isDisposed) notifyListeners();
     } catch (e) {
       debugPrint('Error initializing liveness controller: $e');
-      _statusMessage = 'Error initializing camera. Please restart the app.';
-      notifyListeners();
+      _statusMessage = _config.messages.errorInitializingCamera;
+      if (!_isDisposed) notifyListeners();
     }
   }
 
   /// Process images from the camera stream
   Future<void> _processCameraImage(CameraImage image) async {
+
+    if (_isDisposed) {
+      return;
+    }
+
     if (_isProcessing || !_cameraService.isInitialized) return;
 
     _isProcessing = true;
@@ -141,7 +163,7 @@ class LivenessController extends ChangeNotifier {
         _session = _session.reset(_config);
         _faceDetectionService.resetTracking();
         _motionService.resetTracking();
-        notifyListeners();
+        if (!_isDisposed) notifyListeners();
         return;
       }
 
@@ -171,7 +193,7 @@ class LivenessController extends ChangeNotifier {
       );
 
       // Process faces with error handling
-      List<Face> faces = [];
+      List<Face>? faces = [];
       try {
         faces = await _faceDetectionService.processImage(image, camera);
       } catch (e) {
@@ -179,40 +201,69 @@ class LivenessController extends ChangeNotifier {
         // Continue with empty face list
       }
 
-      if (faces.isNotEmpty) {
-        final face = faces.first;
-        _isFaceDetected = true;
+      if(faces != null) {
+        if (faces.isNotEmpty) {
+          final face = faces.first;
+          _isFaceDetected = true;
 
-        final screenSize = Size(
-          image.width.toDouble(),
-          image.height.toDouble(),
-        );
+          //region ## 1. Calculate the screen size from the camera image
+          // (exactly like you do in _updateFaceCenteringGuidance)
+          final screenSize = Size(
+            image.width.toDouble(),
+            image.height.toDouble(),
+          );
 
-        bool isCentered = false;
-        try {
-          isCentered =
-              _faceDetectionService.checkFaceCentering(face, screenSize);
-          _updateFaceCenteringGuidance(face, screenSize);
-        } catch (e) {
-          debugPrint('Error checking face centering: $e');
-          _faceCenteringMessage = 'Error checking face position';
+          Size screenSizeAux = Size(screenSize.width > screenSize.height ? screenSize.height : screenSize.width, screenSize.width > screenSize.height ? screenSize.width : screenSize.height);
+          //endregion
+
+          //region ## 2. Calculate the rectangle of the oval
+          final ovalCenterY = screenSizeAux.height / 2 - screenSizeAux.height * 0.05;
+          final ovalHeight = screenSizeAux.height * 0.55;
+          final ovalWidth = ovalHeight * 0.75;
+          final ovalRect = Rect.fromCenter(
+            center: Offset(screenSizeAux.width / 2, ovalCenterY),
+            width: ovalWidth,
+            height: ovalHeight,
+          );
+          //endregion
+
+          bool isCentered = false;
+
+          try {
+            isCentered = _faceDetectionService.checkFaceCentering(face, screenSize);
+            _updateFaceCenteringGuidance(face, screenSize);
+          } catch (e) {
+            debugPrint('Error checking face centering: $e');
+            _faceCenteringMessage = _config.messages.errorCheckingFacePosition;
+          }
+
+          //region ## 3. Pass the calculated ovalRect to the processing method
+          if (_session.state == LivenessState.centeringFace && isCentered) {
+            _processLivenessDetection(face, ovalRect);
+          } else if (_session.state != LivenessState.centeringFace) {
+            _processLivenessDetection(face, ovalRect);
+          }
+          //endregion
+
+          // Notify via callback
+          _onFaceDetected?.call(_session.currentChallenge!.type, image, faces, camera);
+        } else {
+          // WARNING: It will be called only after onFaceDetected is called! It will trigger the first face non-detection event after any face detection
+          if(_isFaceDetected) {
+            // Notify via callback
+            _onFaceNotDetected?.call(_session.currentChallenge!.type, this);
+          }
+
+          _isFaceDetected = false;
+          _faceCenteringMessage = _config.messages.noFaceDetected;
         }
 
-        if (_session.state == LivenessState.centeringFace && isCentered) {
-          _processLivenessDetection(face);
-        } else if (_session.state != LivenessState.centeringFace) {
-          _processLivenessDetection(face);
-        }
-      } else {
-        _isFaceDetected = false;
-        _faceCenteringMessage = 'No face detected';
+        if (!_isDisposed) notifyListeners();
       }
-
-      notifyListeners();
     } catch (e) {
       debugPrint('Error in _processCameraImage: $e');
-      _statusMessage = 'Processing error occurred';
-      notifyListeners();
+      _statusMessage = _config.messages.errorProcessing;
+      if (!_isDisposed) notifyListeners();
     } finally {
       _isProcessing = false;
     }
@@ -220,84 +271,102 @@ class LivenessController extends ChangeNotifier {
 
   /// Update face centering guidance message
   void _updateFaceCenteringGuidance(Face face, Size screenSize) {
-    final screenCenterX = screenSize.width / 2;
-    final screenCenterY = screenSize.height / 2 - screenSize.height * 0.05;
+
+    // Adjust screenSize because the camera may have rotated the image
+    Size screenSizeAux = Size(screenSize.width > screenSize.height ? screenSize.height : screenSize.width, screenSize.width > screenSize.height ? screenSize.width : screenSize.height);
+
+    // Oval center (adjusted 5% upwards from screen center)
+    final ovalCenterX = screenSizeAux.width / 2;
+    final ovalCenterY = screenSizeAux.height / 2 - screenSizeAux.height * 0.05;
+
+    // Oval dimensions
+    final ovalHeight = screenSizeAux.height * 0.55;
+    final ovalWidth = ovalHeight * 0.75;
 
     final faceBox = face.boundingBox;
 
+    // Apply coordinate correction for front camera
+    double faceCenterX = faceBox.left + faceBox.width / 2;
+    // WARNING: This is really needed?
     // This is where the problem is - we need to flip the X coordinate on Android with front camera
-    double faceCenterX;
-    if (Platform.isAndroid &&
-        _cameras.first.lensDirection == CameraLensDirection.front) {
-      // Flip the X coordinate for Android front camera
-      faceCenterX = screenSize.width - (faceBox.left + faceBox.width / 2);
-    } else {
-      faceCenterX = faceBox.left + faceBox.width / 2;
-    }
-
+    // if (_currentCamera?.lensDirection == CameraLensDirection.front) {
+    //   // Flip the X coordinate for Android front camera
+    //   faceCenterX = screenSizeAux.width - (faceBox.left + faceBox.width / 2);
+    // }
     final faceCenterY = faceBox.top + faceBox.height / 2;
 
     // Debug prints to verify coordinates
     debugPrint('Face center: ($faceCenterX, $faceCenterY)');
-    debugPrint('Screen center: ($screenCenterX, $screenCenterY)');
+    debugPrint('Screen center: ($ovalCenterX, $ovalCenterY)');
 
-    // Rest of your existing code...
-    final ovalHeight = screenSize.height * 0.55;
-    final ovalWidth = ovalHeight * 0.75;
+
+    // Calculate size ratios
     final faceWidthRatio = faceBox.width / ovalWidth;
+    final isHorizontallyOff = (faceCenterX - ovalCenterX).abs() > screenSize.width * 0.1;
+    final isVerticallyOff = (faceCenterY - ovalCenterY).abs() > screenSize.height * 0.1;
 
-    final isHorizontallyOff =
-        (faceCenterX - screenCenterX).abs() > screenSize.width * 0.1;
-    final isVerticallyOff =
-        (faceCenterY - screenCenterY).abs() > screenSize.height * 0.1;
     final isTooBig = faceWidthRatio > 1.5;
     final isTooSmall = faceWidthRatio < 0.5;
 
     // Direction logic using the corrected coordinates
     if (isTooBig) {
-      _faceCenteringMessage = 'Move farther away';
+      _faceCenteringMessage = _config.messages.moveFartherAway;
     } else if (isTooSmall) {
-      _faceCenteringMessage = 'Move closer';
+      _faceCenteringMessage = _config.messages.moveCloser;
     } else if (isHorizontallyOff) {
-      if (faceCenterX < screenCenterX) {
-        _faceCenteringMessage = 'Move right';
+      if (faceCenterX > ovalCenterX) {
+        _faceCenteringMessage = _config.messages.moveRight;
       } else {
-        _faceCenteringMessage = 'Move left';
+        _faceCenteringMessage = _config.messages.moveLeft;
       }
     } else if (isVerticallyOff) {
-      if (faceCenterY < screenCenterY) {
-        _faceCenteringMessage = 'Move down';
+      if (faceCenterY < ovalCenterY) {
+        _faceCenteringMessage = _config.messages.moveDown;
       } else {
-        _faceCenteringMessage = 'Move up';
+        _faceCenteringMessage = _config.messages.moveUp;
       }
     } else {
-      _faceCenteringMessage = 'Perfect! Hold still';
+      _faceCenteringMessage = _config.messages.perfectHoldStill;
     }
 
     if (!isTooBig && !isTooSmall && !isHorizontallyOff && !isVerticallyOff) {
-      _faceCenteringMessage = 'Perfect! Hold still';
+      _faceCenteringMessage = _config.messages.perfectHoldStill;
       // Force the face detection service to consider the face centered
       _faceDetectionService.forceFaceCentered(true);
     }
   }
 
   /// Process liveness detection for the current state
-  void _processLivenessDetection(Face face) {
+  void _processLivenessDetection(Face face, Rect ovalRect) {
     if (!_cameraService.isLightingGood) {
-      _statusMessage = 'Please move to a better lit area';
+      _statusMessage = _config.messages.poorLighting;
       return;
     }
 
     switch (_session.state) {
       case LivenessState.initial:
         _session.state = LivenessState.centeringFace;
-        _statusMessage = 'Position your face within the oval';
+        _statusMessage = _config.messages.initialInstruction;
         break;
 
       case LivenessState.centeringFace:
         if (_faceDetectionService.isFaceCentered) {
           _session.state = LivenessState.performingChallenges;
           _updateStatusMessage();
+          if (!_isDisposed) notifyListeners();
+
+          // Schedule the ACTUAL start of the challenge animation for the next event cycle.
+          // This gives the UI time to render the initial state of the challenge.
+          Future.delayed(Duration.zero, () {
+            if (_session.currentChallenge?.type == ChallengeType.zoom &&
+                _zoomChallengeController.state == ZoomChallengeState.initial) {
+              _zoomChallengeController.startChallenge();
+            }
+          });
+
+          // WARNING: Do not continue to the 'performingChallenges' case in this same cycle.
+          // Challenge validation will begin on the next camera frame.
+          return;
         } else {
           _statusMessage = _faceCenteringMessage;
         }
@@ -310,17 +379,59 @@ class LivenessController extends ChangeNotifier {
         }
 
         final currentChallenge = _session.currentChallenge!;
+
+        if (currentChallenge.type == ChallengeType.zoom && _zoomChallengeController.state == ZoomChallengeState.initial) {
+          _zoomChallengeController.startChallenge();
+        }
+
         bool challengePassed = _faceDetectionService.detectChallengeCompletion(
-            face, currentChallenge.type);
+          face,
+          currentChallenge.type,
+          // Parameters relevant only to the zoom challenge
+          ovalRect: ovalRect,
+          zoomFactor: _zoomChallengeController.zoomFactor,
+        );
+
+        // If the challenge is zoom, add a check to ensure the animation has finished.
+        if (currentChallenge.type == ChallengeType.zoom) {
+          // The zoom animation is "complete" when the zoomFactor is 1.0.
+          // We use a small tolerance to avoid precision issues with doubles.
+          challengePassed = challengePassed && (_zoomChallengeController.zoomFactor > 0.99);
+        }
 
         if (challengePassed) {
           currentChallenge.isCompleted = true;
+
+          // If the challenge that ended was a zoom, reset the animation controller.
+          if (currentChallenge.type == ChallengeType.zoom) {
+            _currentZoomFactor = _zoomChallengeController.zoomFactor;
+            _zoomChallengeController.reset();
+          }
+
           _session.currentChallengeIndex++;
 
           // Notify via callback
-          _onChallengeCompleted?.call(currentChallenge.type.toString());
+          _onChallengeCompleted?.call(currentChallenge.type);
 
           _updateStatusMessage();
+
+          if (!_isDisposed) notifyListeners();
+
+          //region ## Check next challenge -> Zoom challenge
+          // After passing a challenge, check if the NEXT one is zoom, to start it.
+          final nextChallenge = _session.currentChallenge;
+          if (nextChallenge?.type == ChallengeType.zoom &&
+              _zoomChallengeController.state == ZoomChallengeState.initial) {
+
+            // A small delay so that the user notices the transition of challenges.
+            Future.delayed(const Duration(milliseconds: 500), () {
+              // Check again as the state may have changed.
+              if (_zoomChallengeController.state == ZoomChallengeState.initial) {
+                _zoomChallengeController.startChallenge();
+              }
+            });
+          }
+          //endregion
         }
         break;
 
@@ -340,9 +451,10 @@ class LivenessController extends ChangeNotifier {
 
     if (!motionValid) {
       debugPrint('Potential spoofing detected: Face moved but device didn\'t');
+      _statusMessage = _config.messages.spoofingDetected;
+    } else {
+      _statusMessage = _config.messages.verificationComplete;
     }
-
-    _statusMessage = 'Liveness verification complete!';
 
     // Capture final image if enabled and verification was successful
     if (_captureFinalImage &&
@@ -356,10 +468,8 @@ class LivenessController extends ChangeNotifier {
           final Map<String, dynamic> metadata = {
             'timestamp': DateTime.now().millisecondsSinceEpoch,
             'verificationResult': _isVerificationSuccessful,
-            'challenges':
-                _session.challenges.map((c) => c.type.toString()).toList(),
-            'sessionDuration':
-                DateTime.now().difference(_session.startTime).inMilliseconds,
+            'challenges': _session.challenges.map((c) => c.type.toString()).toList(),
+            'sessionDuration': DateTime.now().difference(_session.startTime).inMilliseconds,
             'lightingValue': _cameraService.lightingValue,
           };
 
@@ -372,8 +482,7 @@ class LivenessController extends ChangeNotifier {
     }
 
     // Notify via callback
-    _onLivenessCompleted
-        ?.call(_session.sessionId, _isVerificationSuccessful, {});
+    _onLivenessCompleted?.call(_session.sessionId, _isVerificationSuccessful, {});
   }
 
   /// Update the current status message
@@ -381,7 +490,7 @@ class LivenessController extends ChangeNotifier {
     if (_session.currentChallenge != null) {
       _statusMessage = _session.currentChallenge!.instruction;
     } else {
-      _statusMessage = 'Processing verification...';
+      _statusMessage = _config.messages.processingVerification;
     }
   }
 
@@ -390,9 +499,17 @@ class LivenessController extends ChangeNotifier {
     _session = _session.reset(_config);
     _faceDetectionService.resetTracking();
     _motionService.resetTracking();
-    _statusMessage = 'Initializing...';
+    _statusMessage = _config.messages.initializing;
     _isVerificationSuccessful = false;
-    notifyListeners();
+
+    _currentZoomFactor = _config.initialZoomFactor;
+    _zoomChallengeController.reset();
+
+    if (onReset != null) {
+      onReset!();
+    }
+
+    if (!_isDisposed) notifyListeners();
   }
 
   /// Update configuration
@@ -401,13 +518,13 @@ class LivenessController extends ChangeNotifier {
     _cameraService.updateConfig(config);
     _faceDetectionService.updateConfig(config);
     _motionService.updateConfig(config);
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
   }
 
   /// Update theme
   void updateTheme(LivenessTheme theme) {
     _theme = theme;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
   }
 
   /// Whether camera is initialized
@@ -452,6 +569,23 @@ class LivenessController extends ChangeNotifier {
   /// Current lighting value (0.0-1.0)
   double get lightingValue => _cameraService.lightingValue;
 
+  double _currentZoomFactor = 0.0;
+
+  /// Factor for oval zoom animation (0.0 to 1.0)
+  double get zoomFactor {
+    final currentChallenge = _session.currentChallenge;
+    // IF the current challenge is zoom and is in progress,
+    // use the real-time animation value.
+    if (currentChallenge?.type == ChallengeType.zoom &&
+        _zoomChallengeController.state == ZoomChallengeState.inProgress) {
+      return _zoomChallengeController.zoomFactor;
+    }
+    // ELSE, return the last value we saved.
+    return _currentZoomFactor;
+  }
+
+  ZoomChallengeState get zoomState => _zoomChallengeController.state;
+
   /// Capture current image as a file
   Future<XFile?> captureImage() async {
     if (_singleCaptureService != null) {
@@ -472,6 +606,7 @@ class LivenessController extends ChangeNotifier {
   /// Clean up resources
   @override
   void dispose() async {
+    _isDisposed = true;
     _isProcessing = false;
 
     try {

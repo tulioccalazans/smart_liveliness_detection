@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:provider/provider.dart';
 import 'package:smart_liveliness_detection/smart_liveliness_detection.dart';
 import 'package:smart_liveliness_detection/src/utils/enums.dart';
@@ -9,19 +10,22 @@ import 'package:smart_liveliness_detection/src/widgets/instruction_overlay.dart'
 import 'package:smart_liveliness_detection/src/widgets/liveness_progress_bar.dart';
 import 'package:smart_liveliness_detection/src/widgets/oval_progress.dart';
 import 'package:smart_liveliness_detection/src/widgets/status_indicator.dart';
-
-import 'success_overlay.dart';
+import 'package:smart_liveliness_detection/src/widgets/success_overlay.dart';
 
 /// Callback type for when a challenge is completed
-typedef ChallengeCompletedCallback = void Function(String challengeType);
+typedef ChallengeCompletedCallback = void Function(ChallengeType challengeType);
 
 /// Callback type for when liveness verification is completed
-typedef LivenessCompletedCallback = void Function(
-    String sessionId, bool isSuccessful, Map<String, dynamic> data);
+typedef LivenessCompletedCallback = void Function(String sessionId, bool isSuccessful, Map<String, dynamic> data);
 
 /// Callback type for when final image is captured with metadata
-typedef FinalImageCapturedCallback = void Function(
-    String sessionId, XFile imageFile, Map<String, dynamic> metadata);
+typedef FinalImageCapturedCallback = void Function(String sessionId, XFile imageFile, Map<String, dynamic> metadata);
+
+/// Callback type for when face is detected
+typedef FaceDetectedCallback = void Function(ChallengeType challengeType, CameraImage image, List<Face> faces, CameraDescription camera);
+
+/// Callback type for when face is NOT detected (It will trigger the first face non-detection event after any face detection)
+typedef FaceNotDetectedCallback = void Function(ChallengeType challengeType, LivenessController controller);
 
 /// Main widget for liveness detection
 class LivenessDetectionScreen extends StatefulWidget {
@@ -39,6 +43,12 @@ class LivenessDetectionScreen extends StatefulWidget {
 
   /// Callback for when liveness verification is completed
   final LivenessCompletedCallback? onLivenessCompleted;
+
+  /// Callback for when face is detected
+  final FaceDetectedCallback? onFaceDetected;
+
+  /// Callback for when face is NOT detected
+  final FaceNotDetectedCallback? onFaceNotDetected;
 
   /// Whether to show app bar
   final bool showAppBar;
@@ -88,40 +98,62 @@ class LivenessDetectionScreen extends StatefulWidget {
     this.useColorProgress = true,
     this.captureFinalImage = false,
     this.onFinalImageCaptured,
+    this.onFaceDetected,
+    this.onFaceNotDetected,
   });
 
   @override
-  State<LivenessDetectionScreen> createState() =>
-      _LivenessDetectionScreenState();
+  State<LivenessDetectionScreen> createState() => _LivenessDetectionScreenState();
 }
 
 class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   late LivenessController _controller;
   XFile? _finalImage;
+
+  late double _zoomFactor;
+
+  void _resetZoomFactor() {
+    setState(() {
+      _zoomFactor = widget.config?.initialZoomFactor ?? 1.0;
+    });
+  }
+
+  void _syncZoomFactor() {
+    final z = _controller.zoomFactor;
+    if (z != _zoomFactor) {
+      setState(() {
+        _zoomFactor = z;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+
+    _resetZoomFactor();
+
     _controller = LivenessController(
       cameras: widget.cameras,
+      vsync: this,
       config: widget.config,
       theme: widget.theme,
       onChallengeCompleted: widget.onChallengeCompleted,
       // Make sure this is using the same type
-      onLivenessCompleted: widget.onLivenessCompleted != null
-          ? (sessionId, isSuccessful, data) {
-              widget.onLivenessCompleted!(sessionId, isSuccessful, data!);
-            }
-          : null,
+      onLivenessCompleted: widget.onLivenessCompleted != null ? (sessionId, isSuccessful, data) {
+        widget.onLivenessCompleted!(sessionId, isSuccessful, data!);
+      } : null,
       onFinalImageCaptured: _handleFinalImageCaptured,
       captureFinalImage: widget.captureFinalImage,
+      onFaceDetected: widget.onFaceDetected,
+      onFaceNotDetected: widget.onFaceNotDetected,
+      onReset: _resetZoomFactor,
     );
     WidgetsBinding.instance.addObserver(this);
   }
 
-  void _handleFinalImageCaptured(
-      String sessionId, XFile imageFile, Map<String, dynamic> metadata) {
+  void _handleFinalImageCaptured(String sessionId, XFile imageFile, Map<String, dynamic> metadata) {
     setState(() {
       _finalImage = imageFile;
     });
@@ -148,6 +180,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
     } else if (state == AppLifecycleState.resumed) {
       _controller = LivenessController(
         cameras: widget.cameras,
+        vsync: this,
         config: widget.config,
         theme: widget.theme,
         onChallengeCompleted: widget.onChallengeCompleted,
@@ -159,7 +192,9 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
             : null,
         onFinalImageCaptured: _handleFinalImageCaptured,
         captureFinalImage: widget.captureFinalImage,
+        onReset: _resetZoomFactor
       );
+      _controller.addListener(_syncZoomFactor);
       setState(() {
         _finalImage = null;
       });
@@ -182,6 +217,7 @@ class _LivenessDetectionScreenState extends State<LivenessDetectionScreen>
 
         // Use the LivenessDetectionView as a widget, not a method
         return LivenessDetectionView(
+          initializingMessage: widget.config?.messages.initializingCamera,
           showAppBar: widget.showAppBar,
           customAppBar: widget.customAppBar,
           customSuccessOverlay: successOverlay,
@@ -287,6 +323,8 @@ class LivenessDetectionView extends StatelessWidget {
   /// Whether to use color progress for oval
   final bool useColorProgress;
 
+  final String? initializingMessage;
+
   /// Constructor
   const LivenessDetectionView({
     super.key,
@@ -298,6 +336,7 @@ class LivenessDetectionView extends StatelessWidget {
     this.onImageCaptured,
     this.captureButtonText,
     this.useColorProgress = true,
+    this.initializingMessage = 'Initializing camera...'
   });
 
   @override
@@ -318,7 +357,7 @@ class LivenessDetectionView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Initializing camera...',
+                initializingMessage!,
                 style: TextStyle(
                   fontSize: 16,
                   color: theme.statusTextStyle.color,
@@ -361,9 +400,18 @@ class LivenessDetectionView extends StatelessWidget {
                 // Camera preview
                 _buildCameraPreview(controller),
 
+                // AnimatedOvalOverlay(
+                //   isFaceDetected: controller.isFaceDetected,
+                //   config: controller.config,
+                //   theme: controller.theme,
+                //   progress: controller.progress,
+                //   zoomFactor: controller.zoomFactor,
+                // ),
+
                 // Oval overlay with color progress indicator
                 if (useColorProgress)
                   OvalColorProgressOverlay(
+                    zoomFactor: controller.zoomFactor,
                     isFaceDetected: controller.isFaceDetected,
                     config: controller.config,
                     theme: controller.theme,
@@ -375,7 +423,7 @@ class LivenessDetectionView extends StatelessWidget {
                 // Status indicators
                 if (showStatusIndicators) ...[
                   Positioned(
-                    top: showAppBar ? 100 : 40,
+                    top: showAppBar ? 130 : 40,
                     right: 20,
                     child: StatusIndicator.faceDetection(
                       isActive: controller.isFaceDetected,
@@ -383,7 +431,7 @@ class LivenessDetectionView extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    top: showAppBar ? 100 : 40,
+                    top: showAppBar ? 130 : 40,
                     left: 20,
                     child: StatusIndicator.lighting(
                       isActive: controller.isLightingGood,
