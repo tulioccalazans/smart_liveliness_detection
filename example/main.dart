@@ -316,6 +316,7 @@ class HomeScreen extends StatelessWidget {
             log('Liveness verification completed:');
             log('Session ID: $sessionId');
             log('Success: $isSuccessful');
+            log('Metadata: $metadata');
           },
           onFaceDetected: (ChallengeType challengeType, CameraImage image, List<Face> faces, CameraDescription camera) {
             log('onFaceDetected - current Challenge: ${challengeType.name}');
@@ -452,6 +453,7 @@ class HomeScreen extends StatelessWidget {
             log('Liveness verification completed:');
             log('Session ID: $sessionId');
             log('Success: $isSuccessful');
+            log('Metadata: $metadata');
           },
         ),
       ),
