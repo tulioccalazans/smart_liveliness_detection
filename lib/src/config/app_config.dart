@@ -29,14 +29,31 @@ class LivenessConfig {
   /// Minimum threshold for adequate lighting (0.0-1.0)
   final double minLightingThreshold;
 
-  /// Pixel value (0-255) for detecting overly bright regions
-  final int brightPixelThreshold;
+  /// Whether to enable screen glare detection (anti-spoofing).
+  final bool enableScreenGlareDetection;
+
+  /// Multiplier for average brightness to set the dynamic glare threshold.
+  /// Pixels brighter than (average * factor) are considered glare.
+  final double glareBrightnessFactor;
 
   /// Minimum percentage of bright pixels to detect screen glare
   final double minBrightPercentage;
 
   /// Maximum percentage of bright pixels to detect screen glare
   final double maxBrightPercentage;
+
+  /// Whether to enable motion correlation check (anti-spoofing).
+  final bool enableMotionCorrelationCheck;
+
+  /// Whether to enable contour analysis on face centering (anti-spoofing).
+  final bool enableContourAnalysisOnCentering;
+
+  /// List of challenges where contour analysis should also be applied.
+  /// Recommended for challenges where the face is expected to be frontal, like 'smile' or 'blink'.
+  final List<ChallengeType>? contourChallengeTypes;
+
+  /// The minimum number of secondary contours required for the contour analysis to pass.
+  final int minRequiredSecondaryContours;
 
   /// Camera zoom level for better face visibility
   final double cameraZoomLevel;
@@ -90,19 +107,19 @@ class LivenessConfig {
 
   /// Maximum number of consecutive processing errors before reinitializing detector
   final int maxConsecutiveErrors;
-  
+
   /// Frame skip interval (process every Nth frame to prevent buffer overflow)
   final int frameSkipInterval;
-  
+
   /// Maximum number of camera restart attempts
   final int maxCameraRestartAttempts;
-  
+
   /// Delay between camera restart attempts
   final Duration cameraRestartDelay;
-  
+
   /// Whether to enable aggressive error recovery
   final bool enableAggressiveErrorRecovery;
-  
+
   /// Maximum image processing timeout
   final Duration imageProcessingTimeout;
 
@@ -132,9 +149,14 @@ class LivenessConfig {
     this.smileThresholdSmiling = LivenessConstants.defaultSmileThresholdSmiling,
     this.headTurnThreshold = LivenessConstants.defaultHeadTurnThreshold,
     this.minLightingThreshold = LivenessConstants.defaultMinLightingThreshold,
-    this.brightPixelThreshold = LivenessConstants.defaultBrightPixelThreshold,
+    this.enableScreenGlareDetection = LivenessConstants.defaultEnableScreenGlareDetection,
+    this.glareBrightnessFactor = LivenessConstants.defaultGlareBrightnessFactor,
     this.minBrightPercentage = LivenessConstants.defaultMinBrightPercentage,
     this.maxBrightPercentage = LivenessConstants.defaultMaxBrightPercentage,
+    this.enableMotionCorrelationCheck = LivenessConstants.defaultEnableMotionCorrelationCheck,
+    this.enableContourAnalysisOnCentering = LivenessConstants.defaultEnableContourAnalysisOnCentering,
+    this.contourChallengeTypes,
+    this.minRequiredSecondaryContours = LivenessConstants.defaultMinRequiredSecondaryContours,
     this.cameraZoomLevel = LivenessConstants.defaultCameraZoomLevel,
     this.maxMotionReadings = LivenessConstants.defaultMaxMotionReadings,
     this.maxHeadAngleReadings = LivenessConstants.defaultMaxHeadAngleReadings,
@@ -175,9 +197,14 @@ class LivenessConfig {
     double? smileThresholdSmiling,
     double? headTurnThreshold,
     double? minLightingThreshold,
-    int? brightPixelThreshold,
+    bool? enableScreenGlareDetection,
+    double? glareBrightnessFactor,
     double? minBrightPercentage,
     double? maxBrightPercentage,
+    bool? enableMotionCorrelationCheck,
+    bool? enableContourAnalysisOnCentering,
+    List<ChallengeType>? contourChallengeTypes,
+    int? minRequiredSecondaryContours,
     double? cameraZoomLevel,
     int? maxMotionReadings,
     int? maxHeadAngleReadings,
@@ -216,9 +243,14 @@ class LivenessConfig {
       smileThresholdSmiling: smileThresholdSmiling ?? this.smileThresholdSmiling,
       headTurnThreshold: headTurnThreshold ?? this.headTurnThreshold,
       minLightingThreshold: minLightingThreshold ?? this.minLightingThreshold,
-      brightPixelThreshold: brightPixelThreshold ?? this.brightPixelThreshold,
+      enableScreenGlareDetection: enableScreenGlareDetection ?? this.enableScreenGlareDetection,
+      glareBrightnessFactor: glareBrightnessFactor ?? this.glareBrightnessFactor,
       minBrightPercentage: minBrightPercentage ?? this.minBrightPercentage,
       maxBrightPercentage: maxBrightPercentage ?? this.maxBrightPercentage,
+      enableMotionCorrelationCheck: enableMotionCorrelationCheck ?? this.enableMotionCorrelationCheck,
+      enableContourAnalysisOnCentering: enableContourAnalysisOnCentering ?? this.enableContourAnalysisOnCentering,
+      contourChallengeTypes: contourChallengeTypes ?? this.contourChallengeTypes,
+      minRequiredSecondaryContours: minRequiredSecondaryContours ?? this.minRequiredSecondaryContours,
       cameraZoomLevel: cameraZoomLevel ?? this.cameraZoomLevel,
       maxMotionReadings: maxMotionReadings ?? this.maxMotionReadings,
       maxHeadAngleReadings: maxHeadAngleReadings ?? this.maxHeadAngleReadings,

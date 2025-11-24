@@ -194,7 +194,7 @@ class HomeScreen extends StatelessWidget {
                     poorLighting: 'Mova-se para uma área mais iluminada',
                     processingVerification: 'Processando verificação...',
                     verificationComplete: 'Verificação de vivacidade concluída!',
-                    spoofingDetected: "Possível falsificação detectada: rosto movido, mas dispositivo não",
+                    spoofingDetected: "Possível falsificação detectada.",
                     errorProcessing: 'Ocorreu um erro de processamento',
                   ),
                 );
@@ -316,6 +316,7 @@ class HomeScreen extends StatelessWidget {
             log('Liveness verification completed:');
             log('Session ID: $sessionId');
             log('Success: $isSuccessful');
+            log('Metadata: $metadata');
           },
           onFaceDetected: (ChallengeType challengeType, CameraImage image, List<Face> faces, CameraDescription camera) {
             log('onFaceDetected - current Challenge: ${challengeType.name}');
@@ -452,6 +453,7 @@ class HomeScreen extends StatelessWidget {
             log('Liveness verification completed:');
             log('Session ID: $sessionId');
             log('Success: $isSuccessful');
+            log('Metadata: $metadata');
           },
         ),
       ),

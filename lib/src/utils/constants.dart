@@ -13,7 +13,8 @@ class LivenessConstants {
 
   // Lighting thresholds
   static const double defaultMinLightingThreshold = 0.25;
-  static const int defaultBrightPixelThreshold = 230;
+  static const bool defaultEnableScreenGlareDetection = true;
+  static const double defaultGlareBrightnessFactor = 3.0;
   static const double defaultMinBrightPercentage = 0.05;
   static const double defaultMaxBrightPercentage = 0.30;
 
@@ -21,6 +22,9 @@ class LivenessConstants {
   static const double defaultCameraZoomLevel = 0.5;
 
   // Motion detection
+  static const bool defaultEnableMotionCorrelationCheck = true;
+  static const bool defaultEnableContourAnalysisOnCentering = true;
+  static const int defaultMinRequiredSecondaryContours = 2;
   static const int defaultMaxMotionReadings = 100;
   static const int defaultMaxHeadAngleReadings = 30;
   static const double defaultSignificantHeadAngleRange = 20.0;

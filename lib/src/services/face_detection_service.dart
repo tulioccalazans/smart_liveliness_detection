@@ -36,8 +36,8 @@ class FaceDetectionService {
   /// Last measured head angle X (for nodding)
   double? _lastHeadEulerAngleX;
 
-  /// History of head angle readings
-  final List<double> _headAngleReadings = [];
+  /// History of head angle readings (dx: angleX, dy: angleY)
+  final List<Offset> _headAngleReadings = [];
 
   /// Configuration for liveness detection
   final LivenessConfig _config;
@@ -268,6 +268,14 @@ class FaceDetectionService {
 
       // Process the image
       final faces = await _faceDetector.processImage(inputImage);
+
+      // Store head angles for motion correlation check
+      if (faces.isNotEmpty) {
+        final face = faces.first;
+        if (face.headEulerAngleX != null && face.headEulerAngleY != null) {
+          _storeHeadAngle(Offset(face.headEulerAngleX!, face.headEulerAngleY!));
+        }
+      }
 
       // Reset error count on successful processing
       _errorCount = 0;
@@ -671,6 +679,49 @@ class FaceDetectionService {
     }
   }
 
+  /// Verifies that the essential facial contours are present and complete.
+  /// This acts as a strong deterrent against mask-based spoofing attempts.
+  bool isContourComplete(Face face) {
+    // Define critical contours that MUST be present.
+    final List<FaceContourType> criticalContours = [
+      FaceContourType.face,
+      FaceContourType.leftEye,
+      FaceContourType.rightEye,
+    ];
+
+    for (final contourType in criticalContours) {
+      if (face.contours[contourType] == null || face.contours[contourType]!.points.length < 3) {
+        debugPrint('Contour integrity check failed: Critical contour missing - ${contourType.name}');
+        return false;
+      }
+    }
+
+    // Define secondary contours that are important but more prone to detection issues.
+    final List<FaceContourType> secondaryContours = [
+      FaceContourType.noseBridge,
+      FaceContourType.leftCheek,
+      FaceContourType.rightCheek,
+      FaceContourType.upperLipTop,
+      FaceContourType.lowerLipBottom,
+    ];
+
+    int detectedSecondaryContours = 0;
+    for (final contourType in secondaryContours) {
+      if (face.contours[contourType] != null && face.contours[contourType]!.points.length >= 3) {
+        detectedSecondaryContours++;
+      }
+    }
+
+    // Check if the number of detected secondary contours meets the minimum requirement.
+    if (detectedSecondaryContours < _config.minRequiredSecondaryContours) {
+      debugPrint('Contour integrity check failed: Not enough secondary contours detected ($detectedSecondaryContours/${_config.minRequiredSecondaryContours})');
+      return false;
+    }
+
+    debugPrint('Contour integrity check passed.');
+    return true;
+  }
+
   bool _detectZoom(Face face, {required Rect ovalRect, required double zoomFactor}) {
     // Validate the face position using the controller's current zoomFactor
     final isPositionedForCurrentZoom = isFaceWellPositioned(
@@ -810,7 +861,6 @@ class FaceDetectionService {
   /// Detect left head turn
   bool _detectLeftTurn(Face face) {
     if (face.headEulerAngleY != null) {
-      _storeHeadAngle(face.headEulerAngleY!);
       return face.headEulerAngleY! > _config.headTurnThreshold;
     }
     return false;
@@ -819,7 +869,6 @@ class FaceDetectionService {
   /// Detect right head turn
   bool _detectRightTurn(Face face) {
     if (face.headEulerAngleY != null) {
-      _storeHeadAngle(face.headEulerAngleY!);
       return face.headEulerAngleY! < -_config.headTurnThreshold;
     }
     return false;
@@ -883,15 +932,15 @@ class FaceDetectionService {
   }
 
   /// Store head angle reading
-  void _storeHeadAngle(double angle) {
-    _headAngleReadings.add(angle);
+  void _storeHeadAngle(Offset angles) {
+    _headAngleReadings.add(angles);
     if (_headAngleReadings.length > _config.maxHeadAngleReadings) {
       _headAngleReadings.removeAt(0);
     }
   }
 
   /// Get head angle readings
-  List<double> get headAngleReadings => _headAngleReadings;
+  List<Offset> get headAngleReadings => _headAngleReadings;
 
   /// Whether face is properly centered
   bool get isFaceCentered => _isFaceCentered;
