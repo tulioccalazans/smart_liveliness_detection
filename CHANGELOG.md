@@ -1,5 +1,5 @@
 # Changelog 
-## Version 0.2.0 - November 24, 2025
+## Version 0.2.1- November 24, 2025
 * Bug fixing, improvements and new features:
 
 - This version has several improvements in anti-spoofing techniques:
