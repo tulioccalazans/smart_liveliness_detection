@@ -44,45 +44,54 @@ class MotionService {
     }
   }
 
+  /// Calculates the standard deviation of a list of values.
+  double _calculateStandardDeviation(List<double> values) {
+    if (values.length < 2) {
+      return 0.0;
+    }
+    double mean = values.reduce((a, b) => a + b) / values.length;
+    double variance = values.map((x) => math.pow(x - mean, 2)).reduce((a, b) => a + b) / values.length;
+    return math.sqrt(variance);
+  }
+
   /// Check if head motion correlates with device motion (anti-spoofing).
-  /// This is improved to be more robust against spoofing attempts.
-  /// It accounts for the device's movement in all directions and fails safely if there is insufficient data.
+  /// This version uses standard deviation for head movement to be more robust against outliers and noise.
   bool verifyMotionCorrelation(List<Offset> headAngleReadings) {
     // Fail-safe: if not enough data is available, consider it a potential issue.
-    if (headAngleReadings.length < 5 || _accelerometerReadings.length < 5) {
+    if (headAngleReadings.length < 10 || _accelerometerReadings.length < 10) {
       debugPrint('Not enough motion data to verify correlation, failing check.');
       return false;
     }
 
-    // Calculate the range of head movement for both X and Y axes.
-    double maxHeadAngleX = headAngleReadings.map((o) => o.dx).reduce(math.max);
-    double minHeadAngleX = headAngleReadings.map((o) => o.dx).reduce(math.min);
-    double headAngleRangeX = maxHeadAngleX - minHeadAngleX;
+    // Calculate the standard deviation of head movement for both X and Y axes.
+    final headAnglesX = headAngleReadings.map((o) => o.dx).toList();
+    final headAnglesY = headAngleReadings.map((o) => o.dy).toList();
+    double headAngleStdDevX = _calculateStandardDeviation(headAnglesX);
+    double headAngleStdDevY = _calculateStandardDeviation(headAnglesY);
 
-    double maxHeadAngleY = headAngleReadings.map((o) => o.dy).reduce(math.max);
-    double minHeadAngleY = headAngleReadings.map((o) => o.dy).reduce(math.min);
-    double headAngleRangeY = maxHeadAngleY - minHeadAngleY;
-
-    // Calculate the magnitude of accelerometer vector for each reading.
+    // Calculate the range of device motion based on vector magnitudes.
     final motionMagnitudes = _accelerometerReadings
         .map((e) => math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z))
         .toList();
-
-    // Calculate the range of device motion based on vector magnitudes.
     double maxDeviceMotion = motionMagnitudes.reduce(math.max);
     double minDeviceMotion = motionMagnitudes.reduce(math.min);
     double deviceMotionRange = maxDeviceMotion - minDeviceMotion;
 
     debugPrint(
-        'Head angle range X: $headAngleRangeX, Y: $headAngleRangeY, Device motion range: $deviceMotionRange');
+        'Head angle StdDev X: $headAngleStdDevX, Y: $headAngleStdDevY, Device motion range: $deviceMotionRange');
 
-    // Spoofing is suspected if the head moved significantly in either axis, but the device did not.
-    bool isSpoofingAttempt = (headAngleRangeX > _config.significantHeadAngleRange ||
-        headAngleRangeY > _config.significantHeadAngleRange) &&
-        deviceMotionRange < _config.minDeviceMovementThreshold;
+    // A significant head movement is detected if the standard deviation in either axis is above the threshold.
+    bool significantHeadMovement = headAngleStdDevX > _config.significantHeadMovementStdDev ||
+        headAngleStdDevY > _config.significantHeadMovementStdDev;
+
+    // An insignificant device movement is detected if the motion range is below the threshold.
+    bool insignificantDeviceMovement = deviceMotionRange < _config.minDeviceMovementThreshold;
+
+    // Spoofing is suspected if the head moved significantly, but the device did not.
+    bool isSpoofingAttempt = significantHeadMovement && insignificantDeviceMovement;
 
     if (isSpoofingAttempt) {
-      debugPrint('Potential spoofing detected: Significant head motion with minimal device motion.');
+      debugPrint('Potential spoofing detected: Significant head motion (StdDev) with minimal device motion.');
     }
 
     // The check is valid if no spoofing is detected.

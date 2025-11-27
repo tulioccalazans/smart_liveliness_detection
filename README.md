@@ -424,12 +424,12 @@ This check analyzes the camera feed for bright, reflective spots. It acts as a n
 
 ### 2. Motion Correlation Check
 
-This is a powerful defense that determines the final success of the verification. It ensures head and device movements are correlated.
+This is a powerful defense that determines the final success of the verification. To prevent false positives from minor tremors, it uses the standard deviation of head angles to detect significant movement. It ensures head and device movements are correlated.
 
 **Configuration:**
 
 - `enableMotionCorrelationCheck`: Set to `false` to disable this check. (Default: `true`)
-- `significantHeadAngleRange`: The minimum range of head movement (in degrees) to be considered significant. (Default: `20.0`)
+- `significantHeadMovementStdDev`: The standard deviation threshold for head movement to be considered significant. A higher value is more tolerant. (Default: `5.0`)
 - `minDeviceMovementThreshold`: The minimum amount of device motion required to pass the check if significant head motion is detected. (Default: `0.5`)
 
 ### 3. Face Contour Analysis (Mask Detection)

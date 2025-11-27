@@ -27,7 +27,7 @@ class LivenessConstants {
   static const int defaultMinRequiredSecondaryContours = 2;
   static const int defaultMaxMotionReadings = 100;
   static const int defaultMaxHeadAngleReadings = 30;
-  static const double defaultSignificantHeadAngleRange = 20.0;
+  static const double defaultSignificantHeadMovementStdDev = 5.0;
   static const double defaultMinDeviceMovementThreshold = 0.5;
 
   // UI settings
