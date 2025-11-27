@@ -325,7 +325,7 @@ class HomeScreen extends StatelessWidget {
             log('onFaceNotDetected - current Challenge: ${challengeType.name}');
 
             // Reset session if face is not detected and the head is not turned
-            if(![ChallengeType.tiltDown, ChallengeType.tiltUp, ChallengeType.nod].contains(challengeType)) {
+            if(![ChallengeType.tiltDown, ChallengeType.tiltUp, ChallengeType.turnRight, ChallengeType.turnLeft, ChallengeType.nod].contains(challengeType)) {
               controller.resetSession();
             }
           },
